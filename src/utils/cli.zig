@@ -1,0 +1,101 @@
+const std = @import("std");
+const print = std.debug.print;
+
+
+// yes, most of this is taken from neo.
+// its because its xpk is more of a rewrite with better QOL then a whole new thing
+
+inline fn errprint(comptime fmt: []const u8, args: anytype) void {
+    print("[x] " ++ fmt, args);
+}
+
+inline fn iprint(comptime fmt: []const u8, args: anytype) void {
+    print("[*] " ++ fmt, args);
+}
+
+inline fn wprint(comptime fmt: []const u8, args: anytype) void {
+    print("[!] " ++ fmt, args);
+}
+
+
+pub fn helpmenu() void {
+    print(
+        \\--- xpk 0.1 ---
+        \\
+        \\ :: A source based package layer for macOs and Linux.
+        \\
+        \\USAGE
+        \\  xpk [action] [package]
+        \\
+        \\ACTIONS
+        \\
+        \\  -a    add        add a package
+        \\  -r    remove     remove a package
+        \\  -l    list       lists all packages
+        \\  -s    search     search for (a) package(s)
+        \\  -p    pull       pull in latest commit for mirrorlist
+        \\  -u    upgrade    upgrade all installed packages
+        \\
+    , .{});
+}
+
+fn isroot() bool {
+    return std.c.getuid() == 0; // they removed getuid from zig std, so unfortunately i must use it from std.c 
+}
+
+pub fn root() !void {
+    if (!isroot()) {
+        errprint("error, xpk must be run with root for downloads or first time use for setting up directories.\n", .{});
+        std.process.exit(1); 
+    }
+}
+// how i feel copy pasting 2 functions
+pub fn global_confirmer(io: std.Io) !void {
+    iprint(
+        "are you sure you want to do this action? [Y/n]: "
+    , .{});
+    var buf: [16]u8 = undefined;
+    
+    var stdin = std.Io.File.stdin().reader(io, &buf);
+    
+    const input = try stdin.interface.takeDelimiterExclusive('\n');
+    if (std.mem.eql(u8,"yes", input) or std.mem.eql(u8, "y", input) or std.mem.eql(u8, "Y", input) or std.mem.eql(u8, "Yes", input)) {
+        return;
+    } else if (std.mem.eql(u8,"no", input) or std.mem.eql(u8, "n", input) or std.mem.eql(u8, "N", input) or std.mem.eql(u8, "No", input)) {
+        std.process.exit(1);
+    } else {
+        print("what? returning. \n", .{});
+        return;
+    }
+}
+
+pub fn package_confirm(io: std.Io, package: [:0]const u8) !void {
+    iprint(
+        "are you sure you want to download {s}? [Y/n]: "
+    , .{package});
+    var buf: [16]u8 = undefined; // PLENTY of bar space
+    
+    var stdin = std.Io.File.stdin().reader(io, &buf);
+    
+    const input = try stdin.interface.takeDelimiterExclusive('\n');
+    if (std.mem.eql(u8,"yes", input) or std.mem.eql(u8, "y", input) or std.mem.eql(u8, "Y", input) or std.mem.eql(u8, "Yes", input)) {
+        return;
+    } else if (std.mem.eql(u8,"no", input) or std.mem.eql(u8, "n", input) or std.mem.eql(u8, "N", input) or std.mem.eql(u8, "No", input)) {
+        std.process.exit(1);
+    } else {
+        print("what? returning.\n", .{});
+        return;
+    }
+}
+
+pub fn version() void {
+    print(
+        \\version 0.1.2.3.4.5.6.7, brought to you by sundowner and firewalld, revamp of our beautiful: neo
+        \\further development at (yo put new github repo here)
+        \\
+    ,.{});
+}
+
+
+
+

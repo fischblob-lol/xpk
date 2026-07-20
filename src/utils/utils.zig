@@ -1,0 +1,61 @@
+//! header file
+const xpkcli = @import("cli.zig");
+const parse = @import("../parser/parser.zig");
+const downloader = @import("../downloader/downloader.zig");
+const hash = @import("../security/hasher.zig");
+const index = @import("../index/index.zig");
+const fetcher = @import("../fetch/rfetch.zig");
+const pull = @import("../fetch/rpull.zig");
+const repo = @import("../repos/repos.zig");
+const repos = @import("../repos/types/types.zig");
+const build = @import("../parser/types/types.zig");
+const dispatcher = @import("../build/dispatch.zig");
+const extractor = @import("../extract/extract.zig");
+
+
+pub const cli = struct {
+    pub const helpmenu = xpkcli.helpmenu;
+    pub const version = xpkcli.version;
+    pub const global_confirm = xpkcli.global_confirmer;
+    pub const package_confirm = xpkcli.package_confirm;
+    pub const root = xpkcli.root;
+};
+
+pub const parser = struct {
+    pub const parse_r = repo.parse_r;
+    pub const parse_a = parse.parse_a;
+    
+    pub const Repo = repos.Repo;
+    pub const Build = build.Build;
+    pub const Pkg = build.Pkg;
+};
+
+pub const indexer = struct {
+    pub const index_repo = index.index_repo;
+};
+
+pub const installer = struct {
+    pub const download = downloader.download;
+    pub const remote_fetch = fetcher.remote_fetch;
+};
+
+pub const builder = struct {
+    pub const run_build = dispatcher.run_build;
+};
+
+pub const extract = struct {
+    pub const extract_tar = extractor.extract_tar;
+};
+
+pub const sync = struct {
+    pub const pull_repo = pull.pull_repo;
+    pub const init_repo = pull.init_repos;
+};
+
+pub const security = struct {
+    pub const get_hash = hash.get_hash;
+};
+
+pub const misc = struct {
+    // to be coming
+};

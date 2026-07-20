@@ -5,8 +5,8 @@ XPK is a source, and binary based package manager
 that aims to be powerful, simple and user friendly
 
 It supports:
-1. musl libc systems
-2. gnu libc systems
+1. musl  systems
+2. glibc systems
 3. XNU/Darwin systems (x86_64)
 4. XNU/Darwin systems (arm64)
 

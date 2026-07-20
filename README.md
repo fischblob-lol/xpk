@@ -27,12 +27,12 @@ and the package manager, from now on.
 
 aurelius (xpk maintainer)
 --------------------------
-  Fingerprint: 7194 59C4 0E06 BCD8 7785 528F 48DC 1015 5AE4 87B5
+    Fingerprint: 7194 59C4 0E06 BCD8 7785 528F 48DC 1015 5AE4 87B5
 
-  Fetch via:
+    Fetch via:
     gpg --keyserver keys.openpgp.org --recv-keys 719459C40E06BCD87785528F48DC10155AE487B5
 
-  Or view directly:
+    Or view directly:
     https://keys.openpgp.org/search?q=719459C40E06BCD87785528F48DC10155AE487B5
 
 firewald (xpk maintainer)

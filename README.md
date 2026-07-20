@@ -12,9 +12,9 @@ It supports:
 5. Anything unix-like that is not super-niche
 
 It does not(and probably never will) support:
-4. Windows (32bit)
-5. Windows (64bit)
-6. Windows (arm64)
+1. Windows (32bit)
+2. Windows (64bit)
+3. Windows (arm64)
 
 License
 =======

@@ -9,11 +9,9 @@ It supports:
 2. glibc systems
 3. XNU/Darwin systems (x86_64)
 4. XNU/Darwin systems (arm64)
+5. Anything unix-like that is not super-niche
 
 It does not(and probably never will) support:
-1. FreeBSD
-2. NetBSD
-3. OpenBSD
 4. Windows (32bit)
 5. Windows (64bit)
 6. Windows (arm64)

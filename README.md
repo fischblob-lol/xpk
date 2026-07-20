@@ -1,4 +1,4 @@
-```
+
 The XPK package manager
 =======================
 XPK is a source, and binary based package manager
@@ -25,4 +25,3 @@ Documentation
 At the moment, XPK is not documented.
 In the not-so-far future, it will be.
 When this will come, the link to the documentation will be put here
-```

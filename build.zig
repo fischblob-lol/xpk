@@ -1,5 +1,6 @@
 const std = @import("std");
 
+// do not recommend building with release, as this is mostly io stuff and moving files, so making the binary smaller is the better choice
 pub fn build(b: *std.Build) void {
     const release = b.option(bool, "release", "strip debug + optimize") orelse false;
     const small = b.option(bool, "small", "strip debug + make binary smaller") orelse false;

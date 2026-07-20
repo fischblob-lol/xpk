@@ -11,6 +11,19 @@ const utils = @import("../utils/utils.zig");
 
 const print = std.debug.print;
 
+
+inline fn errprint(comptime fmt: []const u8, args: anytype) void {
+    print("[x] " ++ fmt, args);
+}
+
+inline fn iprint(comptime fmt: []const u8, args: anytype) void {
+    print("[*] " ++ fmt, args);
+}
+
+inline fn wprint(comptime fmt: []const u8, args: anytype) void {
+    print("[!] " ++ fmt, args);
+}
+
 // taken from neo, only thing implemented new is the limit, so malicious gigantic package specs/infos cant lag you (unless you are lacking 8392 bytes of ram)
 fn fetchraw(allocator: std.mem.Allocator, io: std.Io, url: []const u8) ![]u8 {
     var client = std.http.Client{ .allocator = allocator, .io = io };
@@ -85,6 +98,8 @@ pub fn remote_fetch(io: std.Io, allocator: std.mem.Allocator, package: []const u
     // one call now, way more efficent
     const xbuildurl = try std.fmt.allocPrint(allocator, "{s}/{s}/xbuild", .{ repo.url, path });
     defer allocator.free(xbuildurl);
+
+    iprint("getting remote build files...\n", .{});
 
     const xbuildbytes = try fetchraw(allocator, io, xbuildurl);
 

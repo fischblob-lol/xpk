@@ -19,7 +19,7 @@ fn createdir(io: std.Io, path: []const u8) !void {
 pub fn init_repos(io: std.Io) !void {
     const contents =
         \\[core]
-        \\url = "https://codeberg.org/sundowner/xpk-c"
+        \\url = "https://github.com/fischblob-lol/xpk-c"
         \\priority = 100
         \\enabled = true
         \\# hello from sundowner (expie)
@@ -86,9 +86,7 @@ pub fn pull_repo(io: std.Io, allocator: std.mem.Allocator) !void {
         const indexpath = try std.fs.path.join(allocator, &.{repopath, "index.json"});
         defer allocator.free(indexpath);
 
-
         const old = std.Io.Dir.openFileAbsolute(io, indexpath,.{}) catch null; // catches null instead of try so we dont get error that fucks sync up
-
 
         if (old) |file| {
             file.close(io);

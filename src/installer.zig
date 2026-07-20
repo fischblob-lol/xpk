@@ -4,6 +4,18 @@ const globals = @import("globals.zig");
 const print = std.debug.print;
 
 
+inline fn errprint(comptime fmt: []const u8, args: anytype) void {
+    print("[x] " ++ fmt, args);
+}
+
+inline fn iprint(comptime fmt: []const u8, args: anytype) void {
+    print("[*] " ++ fmt, args);
+}
+
+inline fn wprint(comptime fmt: []const u8, args: anytype) void {
+    print("[!] " ++ fmt, args);
+}
+
 pub fn get_package(io: std.Io, allocator: std.mem.Allocator, package: [:0]const u8) !void {
   
     var pkgurl = try utils.installer.remote_fetch(io, allocator, package);
@@ -11,7 +23,6 @@ pub fn get_package(io: std.Io, allocator: std.mem.Allocator, package: [:0]const 
     
     // before i did renaming i still had pkgurl.manifest, and i was too lazy to change to pkurl.info
     const xbuild = try utils.parser.parse_a(allocator, pkgurl.xbuild.?);
-    
 
     const tarball = try utils.installer.download(io, allocator, xbuild.pkg.src_url);
 
@@ -19,7 +30,7 @@ pub fn get_package(io: std.Io, allocator: std.mem.Allocator, package: [:0]const 
 
     // safety first kids
     if (!try utils.security.get_hash(tarballhandle, io, xbuild.pkg.sha256sum)) {
-        print("sha256 checksum verification failed\n", .{});
+        errprint("sha256 checksum verification failed\n", .{});
         return error.invalidchecksum;
     }
 

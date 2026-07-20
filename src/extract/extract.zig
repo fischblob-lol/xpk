@@ -7,7 +7,6 @@ const print = std.debug.print;
 // i dont need to make specific functions for each extraction
 // which is amazing.
 
-
 fn createdir(io: std.Io, path: []const u8) !void {
     std.Io.Dir.createDirAbsolute(
         io,

@@ -38,7 +38,14 @@ aurelius (xpk maintainer)
 
 firewald (xpk maintainer)
 --------------------------------
-(he is going to put his tommorow)
+    Fingerprint: 8617 C568 8597 EF55 23B4  84CB 4CBF 9096 C9F9 19FA
+
+    Fetch via:
+    gpg --keyserver keys.openpgp.org --recv-keys 8617C5688597EF5523B484CB4CBF9096C9F919FA
+
+    Or view directly:
+    https://keys.openpgp.org/search?q=8617C5688597EF5523B484CB4CBF9096C9F919FA
+
 
 A release signed by either key should be considered valid. If you
 notice a release signed by a key not listed here, treat it as

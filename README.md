@@ -1,7 +1,9 @@
 The XPK package manager
 =======================
-![Zig](https://img.shields.io/badge/language-Zig-F7A41D?logo=zig&logoColor=white)
+![Made with Zig](https://img.shields.io/badge/Made%20with-Zig-F7A41D?logo=zig&logoColor=white)
 ![Status](https://img.shields.io/badge/status-development-blue)
+![GitHub License](https://img.shields.io/github/license/fischblob-lol/xpk) 
+![GitHub last commit](https://img.shields.io/github/last-commit/fischblob-lol/xpk)
 
 
 XPK is a source, and binary based package manager

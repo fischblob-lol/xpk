@@ -5,9 +5,32 @@ const make = @import("make.zig");
 const meson = @import("meson.zig");
 const utils = @import("../utils/utils.zig");
 const autotools = @import("autotools.zig");
+const print = std.debug.print;
 
+inline fn wprint(comptime fmt: []const u8, args: anytype) void {
+    print("[!] " ++ fmt, args);
+}
 
-// actually runs the shit, has to spawn child shells unfortunately, but its fine
+fn ensure_buildusr(io: std.Io) !void {
+    var child = std.process.spawn(io, .{
+        .argv = &.{ "id", "-u", "xpk" },
+        .stdout = .ignore,
+        .stderr = .ignore,
+    }) catch return error.buildusermissing;
+
+    const term = try child.wait(io);
+    switch (term) {
+        .exited => |code| {
+            if (code != 0) {
+                wprint("build user 'xpk' not found. run scripts/needed/setup-xpk-build-user.sh from the repo scripts first\n", .{});
+                return error.buildusermissing;
+            }
+        },
+        else => return error.buildusermissing,
+    }
+}
+
+// build function down herei
 pub fn run_build(io: std.Io, allocator: std.mem.Allocator, build: utils.parser.Build, pkg: utils.parser.Pkg, sourced: []const u8) !void {
     // also BAD `
     if (pkg.pre_hooks) |hooks| {

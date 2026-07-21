@@ -32,7 +32,9 @@ fn ensure_buildusr(io: std.Io) !void {
 
 // build function down herei
 pub fn run_build(io: std.Io, allocator: std.mem.Allocator, build: utils.parser.Build, pkg: utils.parser.Pkg, sourced: []const u8) !void {
-    // also BAD `
+    // put it here to check wether user xpk exists, if not then just exit
+    try ensure_buildusr(io);
+
     if (pkg.pre_hooks) |hooks| {
         for (hooks) |hook| try runner.run_step(io, &.{ "sh", "-c", hook }, sourced);
     }
@@ -50,11 +52,12 @@ pub fn run_build(io: std.Io, allocator: std.mem.Allocator, build: utils.parser.B
         std.debug.print("unsupported build system: {s}\n", .{build.build_sys});
         return error.unsupportedbuildsystem; // keep error here instead of std.process.exit to showcase this is bad and the spec sheet needs rework
     }
-    // just as bad
+    // shouldn't have full perms
     if (build.script) |script| {
         try runner.run_step(io, &.{ "sh", "-c", script }, sourced);
     }
-    // BAD! BAD! BAD! i will remake this, has full perms under root so it can essentially rm -rf your home, or root if SIP is off on mac
+
+    // shouldn't have full perms
     if (build.post_hooks) |hooks| {
         for (hooks) |hook| try runner.run_step(io, &.{ "sh", "-c", hook }, sourced);
     }

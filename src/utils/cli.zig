@@ -18,7 +18,7 @@ inline fn wprint(comptime fmt: []const u8, args: anytype) void {
 }
 
 inline fn qprint(comptime fmt: []const u8, args: anytype) void {
-    print("[+] " ++ fmt, args);
+    print("[?] " ++ fmt, args);
 }
 
 pub fn helpmenu() void {
@@ -75,7 +75,7 @@ pub fn global_confirmer(io: std.Io) !void {
     } else if (std.mem.eql(u8,"no", input) or std.mem.eql(u8, "n", input) or std.mem.eql(u8, "N", input) or std.mem.eql(u8, "No", input)) {
         std.process.exit(1);
     } else {
-        print("what? returning. \n", .{});
+        wprint("what? returning. \n", .{});
         return;
     }
 }
@@ -94,7 +94,7 @@ pub fn package_confirm(io: std.Io, package: [:0]const u8) !void {
     } else if (std.mem.eql(u8,"no", input) or std.mem.eql(u8, "n", input) or std.mem.eql(u8, "N", input) or std.mem.eql(u8, "No", input)) {
         std.process.exit(1);
     } else {
-        print("what? returning.\n", .{});
+        wprint("what? returning.\n", .{});
         return;
     }
 }

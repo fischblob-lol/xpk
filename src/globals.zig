@@ -13,4 +13,5 @@ pub const local = base ++ "/repos";
 pub const reposconf = local ++ "/repos.conf";   // fixed
 pub const firstrun = base ++ "/.xpk";           // fixed
 pub const conf = base ++ "/xpk.conf"; 
-
+// wow 
+pub const buildusr = "xpk";

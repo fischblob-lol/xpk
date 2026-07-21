@@ -17,14 +17,13 @@ inline fn wprint(comptime fmt: []const u8, args: anytype) void {
 }
 
 pub fn get_package(io: std.Io, allocator: std.mem.Allocator, package: [:0]const u8) !void {
-  
     var pkgurl = try utils.installer.remote_fetch(io, allocator, package);
     defer pkgurl.deinit();
     
     // before i did renaming i still had pkgurl.manifest, and i was too lazy to change to pkurl.info
     const xbuild = try utils.parser.parse_a(allocator, pkgurl.xbuild.?);
 
-    const tarball = try utils.installer.download(io, allocator, xbuild.pkg.src_url);
+    const tarball = try utils.installer.download(io, allocator, xbuild.pkg.src_url, false);
 
     const tarballhandle = try std.Io.Dir.openFileAbsolute(io, tarball, .{.mode = .read_only});
 

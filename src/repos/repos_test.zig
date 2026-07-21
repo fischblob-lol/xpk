@@ -1,7 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 const parser = @import("repos.zig"); 
-
+const print = std.debug.print;
 
 // default format for repos:
 //
@@ -69,8 +69,8 @@ test "parse_r no repos errors" {
     const text =
         \\# just a comment rineifokgjoig
     ;
-
-    try testing.expectError(error.norepos, parser.parse_r(a, text));
+    
+    try testing.expectError(error.norepospleasereaddcore, parser.parse_r(a, text));
 }
 
 test "parse_r invalid enabled value errors" {

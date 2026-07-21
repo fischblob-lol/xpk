@@ -13,7 +13,7 @@ test "parse_a valid full manifest parses info, pkg, and build" {
     const text =
         \\[info]
         \\homepage = "https://github.com/abishekvashok/cmatrix"
-        \\maintainer = "abishekvashok"
+        \\upstream = "abishekvashok"
         \\name = "cmatrix"
         \\version = "2.0"
         \\desc = "Terminal based 'The Matrix' like implementation"
@@ -23,7 +23,7 @@ test "parse_a valid full manifest parses info, pkg, and build" {
         \\[pkg]
         \\# comment, messy stuff here
         \\src-url = "https://github.com/abishekvashok/cmatrix/archive/refs/tags/v2.0.tar.gz"
-        \\sha256sum = "ad93ba39acd383696ab6a9ebbed1259ecf2d3cf9f49d6b97038c66f80749e99a"
+        \\sha256 = "ad93ba39acd383696ab6a9ebbed1259ecf2d3cf9f49d6b97038c66f80749e99a"
         \\strip = "1"
         \\pre-hooks = [
         \\  "autoreconf -i"
@@ -40,7 +40,7 @@ test "parse_a valid full manifest parses info, pkg, and build" {
     // info
     try testing.expectEqualStrings("cmatrix", m.info.name);
     try testing.expectEqualStrings("2.0", m.info.version);
-    try testing.expectEqualStrings("abishekvashok", m.info.maintainer);
+    try testing.expectEqualStrings("abishekvashok", m.info.upstream);
     try testing.expectEqualStrings("https://github.com/abishekvashok/cmatrix", m.info.homepage);
     try testing.expectEqualStrings("GPL-3.0", m.info.license.?);
     try testing.expect(m.info.deps == null);
@@ -81,7 +81,7 @@ test "parse_a valid full manifest parses info, pkg, and build" {
 
 //[info]
 //homepage = "https://github.com/abishekvashok/cmatrix"
-//maintainer = "weputnameshere"
+//upstream = "weputnameshere"
 //name = "cmatrix"
 //version = "2.0"
 //desc = "Terminal based 'The Matrix' like implementation"
@@ -97,7 +97,7 @@ test "parse_i valid info parses all fields" {
     const text =
         \\[info]
         \\homepage = "https://github.com/abishekvashok/cmatrix"
-        \\maintainer = "abishekvashok"
+        \\upstream = "abishekvashok"
         \\name = "cmatrix"
         \\version = "2.0"
         \\desc = "Terminal based Matrix implementation"
@@ -108,7 +108,7 @@ test "parse_i valid info parses all fields" {
     const m = try parser.parse_i(a, text);
     try testing.expectEqualStrings("cmatrix", m.name);
     try testing.expectEqualStrings("2.0", m.version);
-    try testing.expectEqualStrings("abishekvashok", m.maintainer);
+    try testing.expectEqualStrings("abishekvashok", m.upstream);
     try testing.expectEqualStrings("https://github.com/abishekvashok/cmatrix", m.homepage);
     try testing.expect(m.deps == null);
 }
@@ -126,7 +126,7 @@ test "parse_i missing info section errors" {
     try testing.expectError(error.missinginfo, parser.parse_i(a, text));
 }
 
-test "parse_i missing maintainer errors" {
+test "parse_i missing upstream errors" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const a = arena.allocator();
@@ -137,7 +137,7 @@ test "parse_i missing maintainer errors" {
         \\version = "2.0"
     ;
 
-    try testing.expectError(error.missingmaintainer, parser.parse_i(a, text));
+    try testing.expectError(error.missingupstream, parser.parse_i(a, text));
 }
 
 test "parse_i single-line deps array parses correctly" {
@@ -147,7 +147,7 @@ test "parse_i single-line deps array parses correctly" {
 
     const text =
         \\[info]
-        \\maintainer = "someone"
+        \\upstream = "someone"
         \\deps = ["thing", "other thing"]
     ;
 
@@ -166,7 +166,7 @@ test "parse_i multi-line deps array parses correctly" {
 
     const text =
         \\[info]
-        \\maintainer = "a guy"
+        \\upstream = "a guy"
         \\deps = [
         \\    "foo",
         \\    "bar",
@@ -188,12 +188,12 @@ test "parse_i comments are stripped, including inline" {
     const text =
         \\[info]
         \\# a comment line
-        \\maintainer = "someone" # inline comment
+        \\upstream = "someone" # inline comment
         \\name = "cmatrix"
     ;
 
     const m = try parser.parse_i(a, text);
-    try testing.expectEqualStrings("someone", m.maintainer);
+    try testing.expectEqualStrings("someone", m.upstream);
     try testing.expectEqualStrings("cmatrix", m.name);
 }
 
@@ -204,7 +204,7 @@ test "parse_i sections after info don't leak in" {
 
     const text =
         \\[info]
-        \\maintainer = "someone"
+        \\upstream = "someone"
         \\name = "cmatrix"
         \\[pkg]
         \\name = "should not overwrite info name"

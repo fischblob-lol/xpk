@@ -125,7 +125,7 @@ pub fn parse_a(allocator: std.mem.Allocator, text: []const u8) !types.Xbuild {
         switch (section) {
             .info => {
                 if (std.mem.eql(u8, key, "homepage")) result.info.homepage = value
-                else if (std.mem.eql(u8, key, "maintainer")) result.info.maintainer = value
+                else if (std.mem.eql(u8, key, "upstream")) result.info.upstream = value
                 else if (std.mem.eql(u8, key, "name")) result.info.name = value
                 else if (std.mem.eql(u8, key, "version")) result.info.version = value
                 else if (std.mem.eql(u8, key, "desc")) result.info.desc = value
@@ -133,7 +133,7 @@ pub fn parse_a(allocator: std.mem.Allocator, text: []const u8) !types.Xbuild {
             },
             .pkg => {
                 if (std.mem.eql(u8, key, "src-url")) result.pkg.src_url = value
-                else if (std.mem.eql(u8, key, "sha256sum")) result.pkg.sha256sum = value
+                else if (std.mem.eql(u8, key, "sha256")) result.pkg.sha256sum = value
                 else if (std.mem.eql(u8, key, "strip")) {
                     if (!(std.mem.eql(u8, value, "1") or
                         std.mem.eql(u8, value, "2") or
@@ -154,7 +154,7 @@ pub fn parse_a(allocator: std.mem.Allocator, text: []const u8) !types.Xbuild {
 
     // errors, union of both original errors
     if (!foundinfo) return error.missinginfo;
-    if (result.info.maintainer.len == 0) return error.missingmaintainer;
+    if (result.info.upstream.len == 0) return error.missingupstream;
     if (!foundpkg) return error.missingpkg;
     if (!foundbuild) return error.missingbuild;
     if (result.pkg.src_url.len == 0) return error.missingsrcurl;
@@ -238,7 +238,7 @@ pub fn parse_i(allocator: std.mem.Allocator, text: []const u8) !types.Info {
         value = parse_quoted(value);
 
         if (std.mem.eql(u8, key, "homepage")) m.homepage = value
-        else if (std.mem.eql(u8, key, "maintainer")) m.maintainer = value
+        else if (std.mem.eql(u8, key, "upstream")) m.upstream = value
         else if (std.mem.eql(u8, key, "name")) m.name = value
         else if (std.mem.eql(u8, key, "version")) m.version = value
         else if (std.mem.eql(u8, key, "desc")) m.desc = value
@@ -247,7 +247,7 @@ pub fn parse_i(allocator: std.mem.Allocator, text: []const u8) !types.Info {
 
     // errors
     if (!foundinfo) return error.missinginfo;
-    if (m.maintainer.len == 0) return error.missingmaintainer;
+    if (m.upstream.len == 0) return error.missingupstream;
     if (deplist.items.len > 0) m.deps = try deplist.toOwnedSlice(allocator);
 
     return m;

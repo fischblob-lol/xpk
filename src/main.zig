@@ -134,7 +134,7 @@ pub fn main(init: std.process.Init) !void {
         try utils.indexer.index_repo(io, allocator, args[2]);
     } else 
 
-    if (std.mem.eql(u8, args[1], "pull")) {
+    if (std.mem.eql(u8, args[1], "pull") or std.mem.eql(u8, args[1], "sync")) {
         try utils.sync.pull_repo(io, allocator);
         return;
     } 

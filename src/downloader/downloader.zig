@@ -14,43 +14,49 @@ fn createdir(io: std.Io, path: []const u8) !void {
 }
 
 // returns path to downloaded file
-pub fn download(io: std.Io, allocator: std.mem.Allocator, url: []const u8) ![]const u8{
+pub fn download(io: std.Io, allocator: std.mem.Allocator, url: []const u8, nobar: bool) ![]const u8 {
     const filename = std.fs.path.basename(url); // wow zig being beautiful
 
     // we return this, so no free
-    const outputpath = try std.fs.path.join(allocator, &.{ globals.tmp, filename});
+    const outputpath = try std.fs.path.join(allocator, &.{ globals.tmp, filename });
     errdefer allocator.free(outputpath);
-   
-    var client = std.http.Client{.allocator = allocator, .io = io};
+
+    var client = std.http.Client{ .allocator = allocator, .io = io };
     defer client.deinit();
 
     const uri = try std.Uri.parse(url);
 
-    var req = try client.request(.GET, uri, .{});
+    var req = try client.request(.GET, uri, .{
+        .extra_headers = &.{
+            .{
+                .name = "Accept-Encoding",
+                .value = "identity",
+            },
+        },
+    });
     defer req.deinit();
-   
+
     try req.sendBodiless();
 
-    var redirectbuf: [1024]u8 = undefined; 
+    var redirectbuf: [1024]u8 = undefined;
     var response = try req.receiveHead(&redirectbuf); // yeah man i recieve head too
-    
+
 
     // straight from src/installer/downloader.zig
-    var transferbuf: [4096]u8 = undefined; 
-	var decompbuf: [65536]u8 = undefined; 
-	var decomp: std.http.Decompress = undefined; 
-	const reader = response.readerDecompressing(&transferbuf, &decomp, &decompbuf);
-    
+    var transferbuf: [4096]u8 = undefined;
+    var decompbuf: [65536]u8 = undefined;
+    var decomp: std.http.Decompress = undefined;
+    const reader = response.readerDecompressing(&transferbuf, &decomp, &decompbuf);
 
     const file = try std.Io.Dir.createFileAbsolute(
         io,
         outputpath,
-        .{ .truncate = true},
+        .{ .truncate = true },
     );
     defer file.close(io);
 
-    // now unlike last time, we stream the data in so i can make the bar correspond to download, yay. 
-    
+    // now unlike last time, we stream the data in so i can make the bar correspond to download, yay.
+
     var writerbuf: [64 * 1024]u8 = undefined; // keep 64, benchmark 128 later
 
     var fwriter = file.writer(io, &writerbuf);
@@ -60,20 +66,29 @@ pub fn download(io: std.Io, allocator: std.mem.Allocator, url: []const u8) ![]co
     var downloaded: usize = 0;
     var spinframe: u8 = 0;
 
+    // niche bug, decompressed data can be larger than content-length
+    // so only show bar when we know content-length matches the stream
+    const hasvalidtotal = response.head.content_length != null and
+        response.head.content_encoding == .identity;
+
     //streaming logic for bar, also added checks for how big the file is so it can adjust its decimal points from kib to mib, will add gb but only later for larger packages
     while (true) {
         const n = try reader.readSliceShort(&buf);
-       
+
         if (n == 0) break;
 
         try writer.writeAll(buf[0..n]);
 
         downloaded += n;
 
-        if (response.head.content_length) |total| {
+        if (nobar) continue; // skip all the printing entirely, just download
+
+        if (hasvalidtotal) {
+            const total = response.head.content_length.?;
+
             const width = 30;
             const filled = @min(downloaded * width / total, width);
-            const percent = downloaded * 100 / total;
+            const percent = @min(downloaded * 100 / total, 100); // gaurd for too high
 
             print("\r[", .{});
 
@@ -104,6 +119,7 @@ pub fn download(io: std.Io, allocator: std.mem.Allocator, url: []const u8) ![]co
         } else {
             // no content length here, so we just have a simple spinner so it looks alright anyways
             // so i need to figure out a way to not get this spinner for github
+            // holy shit am i sleepy
             spinframe +%= 1;
             const spinner = [_]u8{ '|', '/', '-', '\\' };
             const frame = spinner[spinframe % spinner.len];
@@ -118,10 +134,11 @@ pub fn download(io: std.Io, allocator: std.mem.Allocator, url: []const u8) ![]co
             }
         }
     }
+
     // newline because that one doesn't make one
-    print("\n", .{});
-    
+    if (!nobar) print("\n", .{});
+
     try writer.flush(); // flush because _______________
+
     return outputpath;
 }
-

@@ -97,8 +97,7 @@ pub fn parse_r(allocator: std.mem.Allocator, text: []const u8) ![]types.Repo {
     }
 
     if (repos.items.len == 0) {
-        errprint("no repos found! please remove /opt/xpk/.xpk and rerun to recreate core repo", .{});
-        return error.norepos; // technichally will not happen under normal circumstances as xpk auto creates core repo on first use, but if you rm the file its a helpful debugger
+        return error.norepospleasereaddcore; // technichally will not happen under normal circumstances as xpk auto creates core repo on first use, but if you rm the file its a helpful debugger
     }
 
     return repos.toOwnedSlice(allocator);

@@ -8,6 +8,6 @@ python3 -m venv .venv
 
 python -m pip install --upgrade pip
 
-python -m pip install sphinx-book-theme
+python -m pip install furo
 
 echo "run this for virtual env: source .venv/bin/activate"

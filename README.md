@@ -1,4 +1,5 @@
 The XPK package manager
+![Zig](https://img.shields.io/badge/language-Zig-F7A41D?logo=zig&logoColor=white)
 =======================
 XPK is a source, and binary based package manager
 that aims to be powerful, simple and user friendly

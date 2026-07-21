@@ -38,13 +38,13 @@ aurelius (xpk maintainer)
 
 firewald (xpk maintainer)
 --------------------------------
-    Fingerprint: 8617 C568 8597 EF55 23B4  84CB 4CBF 9096 C9F9 19FA
+    Fingerprint: D9F7 0FAA AD6F A15D 6BC3 C755 9B4F B4E0 8086 1302
 
     Fetch via:
-    gpg --keyserver keys.openpgp.org --recv-keys 8617C5688597EF5523B484CB4CBF9096C9F919FA
+    gpg --keyserver keys.openpgp.org --recv-keys D9F70FAAAD6FA15D6BC3C7559B4FB4E080861302
 
     Or view directly:
-    https://keys.openpgp.org/search?q=8617C5688597EF5523B484CB4CBF9096C9F919FA
+    https://keys.openpgp.org/search?q=D9F70FAAAD6FA15D6BC3C7559B4FB4E080861302
 
 
 A release signed by either key should be considered valid. If you

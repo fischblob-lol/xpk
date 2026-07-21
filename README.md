@@ -22,7 +22,7 @@ XPK uses the 2-Clause BSD License. More info about it at: https://opensource.org
 
 Verifying releases (important, read!)
 =======================================
-xpk releases are signed with these keys, for both the core repository
+XPK releases are signed with these keys, for both the core repository
 and the package manager, from now on.
 
 aurelius (xpk maintainer)

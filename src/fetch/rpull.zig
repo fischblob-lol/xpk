@@ -28,6 +28,11 @@ inline fn wprint(comptime fmt: []const u8, args: anytype) void {
     print("[!] " ++ fmt, args);
 }
 
+// cool looking print
+inline fn cprint(comptime fmt: []const u8, args: anytype) void {
+    print("[+] " ++ fmt, args);
+}
+
 
 // inits the main repo firstly, used in main right after all creations run, this is gonna uhh change, 100% because this is the commit to github
 pub fn init_repos(io: std.Io) !void {
@@ -101,7 +106,7 @@ pub fn pull_repo(io: std.Io, allocator: std.mem.Allocator) !void {
         defer allocator.free(keyringurl);
 
 
-        iprint("syncing {s}\n",.{repo.name});
+        cprint("syncing {s}\n",.{repo.name});
 
         // NO ASYNC YET ADD ASYNC LATER!!!
         // NO ASYNC YET ADD ASYNC LATER!!!
@@ -109,7 +114,7 @@ pub fn pull_repo(io: std.Io, allocator: std.mem.Allocator) !void {
         // NO ASYNC YET ADD ASYNC LATER!!!
         // NO ASYNC YET ADD ASYNC LATER!!!
         // aka tmrw
-        const downloadedindex = try downloader.download(io,allocator, indexurl, false);
+        const downloadedindex = try downloader.download_repo(io,allocator, indexurl, repo.name, false);
         const downloadedkeyring = try downloader.download(io, allocator, keyringurl, true);
 
         const indexpath = try std.fs.path.join(allocator, &.{repopath, "index.json"});

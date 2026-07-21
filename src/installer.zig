@@ -23,6 +23,9 @@ pub fn get_package(io: std.Io, allocator: std.mem.Allocator, package: [:0]const 
     // before i did renaming i still had pkgurl.manifest, and i was too lazy to change to pkurl.info
     const xbuild = try utils.parser.parse_a(allocator, pkgurl.xbuild.?);
 
+
+    iprint("downloading {s}", .{package});
+    
     const tarball = try utils.installer.download(io, allocator, xbuild.pkg.src_url, false);
 
     const tarballhandle = try std.Io.Dir.openFileAbsolute(io, tarball, .{.mode = .read_only});

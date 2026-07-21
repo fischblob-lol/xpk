@@ -17,6 +17,9 @@ inline fn wprint(comptime fmt: []const u8, args: anytype) void {
     print("[!] " ++ fmt, args);
 }
 
+inline fn qprint(comptime fmt: []const u8, args: anytype) void {
+    print("[+] " ++ fmt, args);
+}
 
 pub fn helpmenu() void {
     print(
@@ -40,7 +43,15 @@ pub fn helpmenu() void {
 }
 
 fn isroot() bool {
-    return std.c.getuid() == 0; // they removed getuid from zig std, so unfortunately i must use it from std.c 
+    return switch(@import("builtin").os.tag) {
+        .linux => std.os.linux.getuid() == 0,
+        .macos => std.c.getuid() == 0,
+        .dragonfly => std.c.getuid() == 0,
+        .netbsd => std.c.getuid() == 0,
+        .freebsd => std.c.getuid() == 0,
+        .openbsd => std.c.getuid() == 0,
+        else => @compileError("not supported OS")
+    };
 }
 
 pub fn root() !void {
@@ -51,7 +62,7 @@ pub fn root() !void {
 }
 // how i feel copy pasting 2 functions
 pub fn global_confirmer(io: std.Io) !void {
-    iprint(
+    qprint(
         "are you sure you want to do this action? [Y/n]: "
     , .{});
     var buf: [16]u8 = undefined;
@@ -70,7 +81,7 @@ pub fn global_confirmer(io: std.Io) !void {
 }
 
 pub fn package_confirm(io: std.Io, package: [:0]const u8) !void {
-    iprint(
+    qprint(
         "are you sure you want to download {s}? [Y/n]: "
     , .{package});
     var buf: [16]u8 = undefined; // PLENTY of bar space

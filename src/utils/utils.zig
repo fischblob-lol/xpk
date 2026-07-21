@@ -50,6 +50,7 @@ pub const extract = struct {
 pub const sync = struct {
     pub const pull_repo = pull.pull_repo;
     pub const init_repo = pull.init_repos;
+    pub const download_repos = downloader.download_repo;
 };
 
 pub const security = struct {

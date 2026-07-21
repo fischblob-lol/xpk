@@ -154,7 +154,6 @@ pub fn parse_a(allocator: std.mem.Allocator, text: []const u8) !types.Xbuild {
 
     // errors, union of both original errors
     if (!foundinfo) return error.missinginfo;
-    if (result.info.upstream.len == 0) return error.missingupstream;
     if (!foundpkg) return error.missingpkg;
     if (!foundbuild) return error.missingbuild;
     if (result.pkg.src_url.len == 0) return error.missingsrcurl;
@@ -247,7 +246,6 @@ pub fn parse_i(allocator: std.mem.Allocator, text: []const u8) !types.Info {
 
     // errors
     if (!foundinfo) return error.missinginfo;
-    if (m.upstream.len == 0) return error.missingupstream;
     if (deplist.items.len > 0) m.deps = try deplist.toOwnedSlice(allocator);
 
     return m;

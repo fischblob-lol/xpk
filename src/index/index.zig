@@ -47,8 +47,13 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
             const buildpath = try std.fs.path.join(allocator, &.{ categorypath, package.name, "xbuild" });
             defer allocator.free(buildpath);
 
-            const bytes = try std.Io.Dir.cwd().readFileAlloc(io, buildpath, allocator, .unlimited);
-            defer allocator.free(bytes);
+            const bytes = std.Io.Dir.cwd().readFileAlloc(io, buildpath, allocator, .unlimited) catch |err| switch (err) {
+                error.FileNotFound => {
+                    wprint("{s}/{s} has no xbuild, skipping\n", .{ category.name, package.name });
+                    continue;
+                }, else => return err,
+            };
+            defer allocator.free(bytes);       
             
             // this will fail if not all requirements for [pkg] and [build] are satisfied too, however i think thats fine for right now or maybe long term before we get 'just' binaries 
             const xbuild = try utils.parser.parse_a(allocator, bytes);

@@ -15,7 +15,7 @@ pub const Build = struct {
 
 pub const Info = struct {
     homepage: []const u8 = "",
-    upstream: []const u8 = "",
+    upstream: ?[]const u8 = "",
     name: []const u8 = "",
     version: []const u8 = "",
     desc: ?[]const u8 = null,

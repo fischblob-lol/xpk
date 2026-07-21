@@ -15,6 +15,46 @@ fn createdir(io: std.Io, path: []const u8) !void {
         else => return err,
     };
 }
+// and another one here, because iof the crossdevice bug
+fn rename(io: std.Io, old: []const u8, new: []const u8) !void {
+    std.Io.Dir.renameAbsolute(old, new, io) catch |err| switch (err) {
+        error.CrossDevice => {
+            // rename cannot cross filesystems, so we just stream and delete, also atomic so its better
+
+            const src = try std.Io.Dir.openFileAbsolute(io, old, .{});
+            defer src.close(io);
+
+            const dst = try std.Io.Dir.createFileAbsolute(io, new, .{
+                .truncate = true,
+            });
+            defer dst.close(io);
+
+            var writerbuf: [64 * 1024]u8 = undefined;
+            var fwriter = dst.writer(io, &writerbuf);
+            const writer = &fwriter.interface;
+
+            var buf: [64 * 1024]u8 = undefined;
+            var freader = src.reader(io, &buf);
+            const reader = &freader.interface;
+
+            while (true) {
+                const n = try reader.readSliceShort(&buf);
+                
+
+                if (n == 0)
+                    break;
+
+                try writer.writeAll(buf[0..n]);
+            }
+    
+            try writer.flush();
+
+            try std.Io.Dir.deleteFileAbsolute(io, old);
+        },
+        else => return err,
+    };
+}
+
 
 inline fn errprint(comptime fmt: []const u8, args: anytype) void {
     print("[x] " ++ fmt, args);
@@ -80,14 +120,11 @@ pub fn pull_repo(io: std.Io, allocator: std.mem.Allocator) !void {
             continue;
         }
         
-
         // globals are gonna make it much easier to port to linux later
         const repopath = try std.fs.path.join(allocator,&.{globals.local, repo.name});
         defer allocator.free(repopath);
 
-
-        try createdir(io,repopath);
-
+        try createdir(io,repopath); // safe because if error it just catches null and exits only this not main problem
 
         const indexurl = try std.fmt.allocPrint(
             allocator,
@@ -101,7 +138,7 @@ pub fn pull_repo(io: std.Io, allocator: std.mem.Allocator) !void {
             .{repo.url}
         );
 
-    
+
         defer allocator.free(indexurl);
         defer allocator.free(keyringurl);
 
@@ -121,25 +158,11 @@ pub fn pull_repo(io: std.Io, allocator: std.mem.Allocator) !void {
         const keyringpath = try std.fs.path.join(allocator, &.{repopath, "keyring.json"});
         
         defer allocator.free(indexpath);
-        defer allocator.free(keyringpath);
-
-        const old = std.Io.Dir.openFileAbsolute(io, indexpath,.{}) catch null;
-        const old2 = std.Io.Dir.openFileAbsolute(io, keyringpath,.{}) catch null; // catches null instead of try so we dont get error that fucks sync up
-
-        if (old) |file| {
-            file.close(io);
-            try std.Io.Dir.deleteFileAbsolute(io,indexpath);
-        }
-
-        if (old2) |file| {
-            file.close(io);
-            try std.Io.Dir.deleteFileAbsolute(io,keyringpath);
-        }
+        defer allocator.free(keyringpath); 
         
         // renames the index.json into the indexpath, clever little trick to just move file into another location, which is name of repo in /opt/xpk/repos + index.json, simple
-        try std.Io.Dir.renameAbsolute(downloadedindex,indexpath,io);
-        try std.Io.Dir.renameAbsolute(downloadedkeyring,keyringpath,io);
-
+        try rename(io, downloadedindex, indexpath);
+        try rename(io, downloadedkeyring, keyringpath);
 
         iprint("repository {s} updated\n",.{repo.name});
     }

@@ -1,4 +1,3 @@
-
 The XPK package manager
 =======================
 XPK is a source, and binary based package manager
@@ -15,15 +14,16 @@ It does not(and probably never will) support:
 1. Windows (32bit)
 2. Windows (64bit)
 3. Windows (arm64)
+4. Literally anything that isn't unix-like
 
 License
 =======
 XPK uses the 2-Clause BSD License. More info about it at: https://opensource.org/license/bsd-2-clause
 
-Verifying releases (important, read!)
+> [!IMPORTANT] Verifying releases
 =======================================
-XPK releases are signed with these keys, for both the core repository
-and the package manager, from now on.
+> XPK releases are signed with these keys, for both the core repository
+> and the package manager, from now on.
 
 aurelius (xpk maintainer)
 --------------------------
@@ -50,6 +50,6 @@ In the not-so-far future, it will be.
 When this will come, the link to the documentation will be put here
 
 
-notes to future me 
+notes to future sundowner
 =============
 tommorow PLEASE add asynchronous downloads.

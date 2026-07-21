@@ -86,7 +86,7 @@ pub fn download(io: std.Io, allocator: std.mem.Allocator, url: []const u8, nobar
         if (hasvalidtotal) {
             const total = response.head.content_length.?;
 
-            const width = 30;
+            const width = 50;
             const filled = @min(downloaded * width / total, width);
             const percent = @min(downloaded * 100 / total, 100); // gaurd for too high
 
@@ -95,7 +95,7 @@ pub fn download(io: std.Io, allocator: std.mem.Allocator, url: []const u8, nobar
 
             for (0..width) |i| {
                 if (i < filled) {
-                    print("#", .{});
+                    print("=", .{});
                 } else {
                     print(" ", .{});
                 }

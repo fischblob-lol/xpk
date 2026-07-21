@@ -129,7 +129,8 @@ pub fn parse_a(allocator: std.mem.Allocator, text: []const u8) !types.Xbuild {
                 else if (std.mem.eql(u8, key, "name")) result.info.name = value
                 else if (std.mem.eql(u8, key, "version")) result.info.version = value
                 else if (std.mem.eql(u8, key, "desc")) result.info.desc = value
-                else if (std.mem.eql(u8, key, "license")) result.info.license = value;
+                else if (std.mem.eql(u8, key, "license")) result.info.license = value
+                else return error.unknownkeyininfo;
             },
             .pkg => {
                 if (std.mem.eql(u8, key, "src-url")) result.pkg.src_url = value
@@ -143,10 +144,12 @@ pub fn parse_a(allocator: std.mem.Allocator, text: []const u8) !types.Xbuild {
                     }
                     result.pkg.strip = value;
                 }
+                else return error.unknownkeyinpkg;
             },
             .build => {
                 if (std.mem.eql(u8, key, "build-sys")) result.build.build_sys = value
-                else if (std.mem.eql(u8, key, "script")) result.build.script = value;
+                else if (std.mem.eql(u8, key, "script")) result.build.script = value
+                else return error.unknownkeyinbuild;
             },
             .none => {},
         }

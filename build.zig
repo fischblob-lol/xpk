@@ -4,7 +4,18 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const release = b.option(bool, "release", "strip debug + optimize") orelse false;
     const small = b.option(bool, "small", "strip debug + make binary smaller") orelse false;
-    const target = b.standardTargetOptions(.{});
+   
+    const linux = b.option(bool, "linux", "cross compile to linux based systems") orelse false;
+
+    
+    const target = if (linux)
+    b.resolveTargetQuery(.{
+        .cpu_arch = .x86_64, // for linux
+        .os_tag = .linux,
+    })
+    else
+    b.standardTargetOptions(.{});
+    
     const utils = b.createModule(.{
         .root_source_file = b.path("src/utils/utils.zig"),
     });

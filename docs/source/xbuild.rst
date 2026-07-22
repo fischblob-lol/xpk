@@ -80,7 +80,7 @@ Here is a cheatsheet for all the categories and names.
 +----------------+--------------+-------------------------+-----------+
 | build          | build-sys    | Build system            | Yes       |
 +----------------+--------------+-------------------------+-----------+
-| build          | script       | optional variable incase| Yes,       |
+| build          | script       | optional variable incase| Yes,      |
 |                |              | scripts need to be ran  | if none:  |
 |                |              |                         | just put  |
 |                |              |                         | it as '[]'|

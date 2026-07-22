@@ -1,6 +1,7 @@
 The XPK package manager
 =======================
 ![Made with Zig](https://img.shields.io/badge/Made%20with-Zig-F7A41D?logo=zig&logoColor=white)
+![Made with C](https://icons8.com/icon/40670/c-programming)
 ![Status](https://img.shields.io/badge/status-development-blue)
 ![GitHub License](https://img.shields.io/github/license/fischblob-lol/xpk) 
 

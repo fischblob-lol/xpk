@@ -60,9 +60,11 @@ untrusted and please open an issue, although this shan't happen.
 
 Documentation
 =============
-At the moment, XPK is not documented.
-In the not-so-far future, it will be.
-When this will come, the link to the documentation will be put here
+At the moment, xpk is not well documented. However, you can run:
+```bash
+scripts/setup-docs.sh && build-docs.sh 
+```
+to initialize docs locally, in the near future they will be hosted on a website for easier viewing.
 
 How can I say thanks?
 =====================

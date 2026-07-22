@@ -55,6 +55,8 @@ License
 
 XPK is licensed under the **simplified** BSD 2-Clause License. 
 
+More info about [here](https://spdx.org/licenses/BSD-2-Clause.html)
+
 Project
 -------
 

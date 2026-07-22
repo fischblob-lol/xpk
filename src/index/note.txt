@@ -1,0 +1,2 @@
+ill start working on a binary format for indexing like right after this commit, it will work by same principle, get a local path an index, but the goal is to minimize everything, make faster more portable and better for reading kinda like sql
+and when i get more then 200 packages ill also use std.compress to compress said binary index, so downloading it will be even faster

@@ -1,14 +1,14 @@
 //! header file
 const xpkcli = @import("cli.zig");
-const parse = @import("../parser/parser.zig");
+const parse = @import("../parsers/buildparser.zig");
 const downloader = @import("../downloader/downloader.zig");
 const hash = @import("../security/hasher.zig");
 const index = @import("../index/index.zig");
 const fetcher = @import("../fetch/rfetch.zig");
 const pull = @import("../fetch/rpull.zig");
-const repo = @import("../repos/repos.zig");
-const repos = @import("../repos/types/types.zig");
-const build = @import("../parser/types/types.zig");
+const repo = @import("../parsers/repos/repos.zig");
+const repos = @import("../parsers/repos/types/types.zig");
+const build = @import("../parsers/types/types.zig");
 const dispatcher = @import("../build/dispatch.zig");
 const extractor = @import("../extract/extract.zig");
 

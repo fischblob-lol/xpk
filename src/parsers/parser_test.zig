@@ -1,6 +1,6 @@
 const std = @import("std");
 const testing = std.testing;
-const parser = @import("parser.zig"); 
+const parser = @import("buildparser.zig"); 
 const types = @import("types/types.zig");
 
 // production code test

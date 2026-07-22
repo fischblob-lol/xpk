@@ -2,23 +2,13 @@ const std = @import("std");
 const types = @import("types/types.zig");
 const print = std.debug.print;
 
-// strip comment and parse quoted made a function so i don't have to implement ts all the time
-fn strip_comment(line: []const u8) []const u8 {
-    var quoted = false;
-    for (line, 0..) | c, i | {
-        if (c == '"') quoted = !quoted;
-        if (c == '#' and !quoted) return std.mem.trim(u8, line[0..i], " \t\r");
-    }
-    return std.mem.trim(u8, line, " \t\r");
-} 
+const stripl = @import("stripl.zig");
 
-fn parse_quoted(value: []const u8) []const u8 {
-    const trimmed = std.mem.trim(u8, value, " \t");
-    if (trimmed.len >= 2 and trimmed[0] == '"' and trimmed[trimmed.len - 1] == '"') {
-        return trimmed[1 .. trimmed.len - 1];
-    }
-    return trimmed;
-}
+pub const strip_comment = stripl.strip_comment;
+pub const parse_quoted = stripl.parse_quoted;
+
+// strip comment and parse quoted made a function so i don't have to implement ts all the time
+
 
 // parse_a - combined parser, one file has [info], [pkg], and [build] all together.
 // merge of parse_i and parse_s, this is for production code

@@ -1,0 +1,4 @@
+the entire parsers directory will infact be rewritten, and i will make my own toml parser, and all the other functions are gonna become wrappers which will greatly reduce total .text in the binary!
+thats for later though, its much easier for me to right now just make multiple mini parsers, rather then a complete and full proof gigantic parser (im planning for it to be 500~ lines with alot of error handling)
+eventually ill make the parser a lib and turn it into a seperate mini project on github, its gonna be a mini project because xpk is my actual product
+and ill probably keep the layout but maybe it will change? idk, i like having all parsers in that section

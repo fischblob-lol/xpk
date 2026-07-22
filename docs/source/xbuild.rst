@@ -73,12 +73,14 @@ Here is a cheatsheet for all the categories and names.
 | pkg            | strip        | (integer) How many      | No        |
 |                |              | folders to strip        |           |
 +----------------+--------------+-------------------------+-----------+
-| pkg            | pre-hooks    | (array) (string) (shell)| No        |
-|                |              | Pre hooks (just shell)  |           |
+| pkg            | pre-hooks    | (array) (string) (shell)| Yes,      |
+|                |              | Pre hooks (just shell)  | if none:  |
+|                |              |                         | just put  |
+|                |              |                         | it as '[]'|
 +----------------+--------------+-------------------------+-----------+
 | build          | build-sys    | Build system            | Yes       |
 +----------------+--------------+-------------------------+-----------+
-| build          | script       | optional variable incase| Yes       |
+| build          | script       | optional variable incase| Yes,       |
 |                |              | scripts need to be ran  | if none:  |
 |                |              |                         | just put  |
 |                |              |                         | it as '[]'|

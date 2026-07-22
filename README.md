@@ -64,6 +64,10 @@ At the moment, XPK is not documented.
 In the not-so-far future, it will be.
 When this will come, the link to the documentation will be put here
 
+How can I say thanks?
+=====================
+Spread the word!
+
 Star history
 ============
 <a href="https://www.star-history.com/?repos=fischblob-lol%2Fxpk&type=date&legend=bottom-right">

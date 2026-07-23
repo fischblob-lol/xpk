@@ -157,5 +157,6 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
     try writer.interface.writeAll(indexbin);
     try writer.interface.flush();
 
+    // also, later ill add a compression to the index.bin so for even more packages its compressed and is so much faster to download
     iprint("indexed {d} packages\n", .{entries.items.len});
 }

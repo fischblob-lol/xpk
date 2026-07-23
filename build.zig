@@ -69,6 +69,7 @@ pub fn build(b: *std.Build) void {
     
     parser.addImport("automl", automl.module("automl"));
     parsers.root_module.addImport("automl", automl.module("automl"));
+    exe.root_module.addImport("automl", automl.module("automl"));
     exe.root_module.addImport("utils", utils);
     b.installArtifact(exe);
 }

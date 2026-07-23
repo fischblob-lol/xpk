@@ -2,7 +2,6 @@ const std = @import("std");
 const types = @import("types/types.zig");
 const automl = @import("automl");
 
-
 const print = std.debug.print;
 
 inline fn errprint(comptime fmt: []const u8, args: anytype) void {
@@ -16,8 +15,8 @@ inline fn iprint(comptime fmt: []const u8, args: anytype) void {
 inline fn wprint(comptime fmt: []const u8, args: anytype) void {
     print("[!] " ++ fmt, args);
 }
-// all of these are now here
 
+// so, congrats to me! i've written an entire fucking fully function toml parser, and its working here as evident
 
 // instead of a shitty 150 line parser my parser is now 1000 lines and is a helper!
 pub fn parse_k(allocator: std.mem.Allocator, text: []const u8) !types.Keyring {
@@ -63,7 +62,7 @@ pub fn parse_k(allocator: std.mem.Allocator, text: []const u8) !types.Keyring {
     return result;
 }
 
-// pulls fields from there, key_fromtable
+// pulls fields from there, key_fromtable, required for children
 fn key_ftb(table: *automl.Table) !types.Key {
     return .{
         .fingerprint = (table.get("fingerprint") orelse return error.unknownkeyinkeyring).as_str() orelse return error.unknownkeyinkeyring,
@@ -114,7 +113,7 @@ pub fn parse_r(allocator: std.mem.Allocator, text: []const u8) ![]types.Repo {
         // into repos, so it needs its own cleanup on that path specifically
         errdefer allocator.free(url);
 
-        const priority: u8 = if (sect.values.get("priority")) |v|
+        const priority: u8 = if (sect.values.get("priority")) |v| 
             @intCast(v.as_int() orelse return error.invalidpriority)
         else
             0;

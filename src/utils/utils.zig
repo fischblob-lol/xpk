@@ -1,13 +1,12 @@
 //! header file
 const xpkcli = @import("cli.zig");
-const parse = @import("../parsers/buildparser.zig");
+const parsers = @import("../parsers/parsers.zig");
 const downloader = @import("../downloader/downloader.zig");
 const hash = @import("../security/hasher.zig");
 const index = @import("../index/index.zig");
 const fetcher = @import("../fetch/rfetch.zig");
 const pull = @import("../fetch/rpull.zig");
-const repo = @import("../parsers/repos/repos.zig");
-const repos = @import("../parsers/repos/types/types.zig");
+
 const build = @import("../parsers/types/types.zig");
 const dispatcher = @import("../build/dispatch.zig");
 const extractor = @import("../extract/extract.zig");
@@ -22,10 +21,11 @@ pub const cli = struct {
 };
 
 pub const parser = struct {
-    pub const parse_r = repo.parse_r;
-    pub const parse_a = parse.parse_a;
+    pub const parse_r = parsers.parse_r;
+    pub const parse_a = parsers.parse_a;
+    pub const parse_k = parsers.parse_k; 
     
-    pub const Repo = repos.Repo;
+    pub const Repo = build.Repo;
     pub const Build = build.Build;
     pub const Pkg = build.Pkg;
 };

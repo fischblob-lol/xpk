@@ -6,7 +6,6 @@ The XPK package manager
 ![GitHub License](https://img.shields.io/github/license/fischblob-lol/xpk) 
 
 
-
 XPK is a source, and binary based package manager
 that aims to be powerful, simple and user friendly
 

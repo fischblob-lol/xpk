@@ -83,9 +83,7 @@ pub fn parse_r(allocator: std.mem.Allocator, text: []const u8) ![]types.Repo {
 
     var repos: std.ArrayList(types.Repo) = .empty;
     errdefer {
-        // free every url already appended before whatever error tripped us up --
-        // repos.deinit alone only frees the ArrayList's backing storage, not the
-        // owned url strings sitting inside each already-appended Repo
+        // free every url already appended before whatever error tripped us up 
         for (repos.items) |repo| allocator.free(repo.url);
         repos.deinit(allocator);
     }
@@ -109,9 +107,8 @@ pub fn parse_r(allocator: std.mem.Allocator, text: []const u8) ![]types.Repo {
             // case of unknown host, will work if the layout is cool but ill add more checks n shit
             url = try allocator.dupe(u8, urlstr);
         }
-        // if priority/enabled validation below fails, this url never makes it
         // into repos, so it needs its own cleanup on that path specifically
-        errdefer allocator.free(url);
+        errdefer allocator.free(url); // so thats why its here
 
         const priority: u8 = if (sect.values.get("priority")) |v| 
             @intCast(v.as_int() orelse return error.invalidpriority)
@@ -149,8 +146,7 @@ pub fn parse_a(allocator: std.mem.Allocator, text: []const u8) !types.Xbuild {
 
     var result: types.Xbuild = .{};
 
-    // errors, union of both original errors -- automl doesn't know which
-    // sections xbuild *requires*, so we still gate on presence ourselves
+    // errors, union of both original errors automl doesn't know which sections xbuild requires
     if (doc.section("info") == null) return error.missinginfo;
     if (doc.section("pkg") == null) return error.missingpkg;
     if (doc.section("build") == null) return error.missingbuild;

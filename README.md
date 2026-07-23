@@ -61,7 +61,7 @@ Documentation
 =============
 At the moment, xpk is not well documented. However, you can run:
 ```bash
-scripts/setup-docs.sh && build-docs.sh 
+scripts/setup-docs.sh && scripts/build-docs.sh 
 ```
 to initialize docs locally, in the near future they will be hosted on a website for easier viewing.
 

@@ -35,6 +35,7 @@ inline fn writeU32(list: *std.ArrayList(u8), allocator: std.mem.Allocator, val: 
 // encodes the whole entry list into the index.bin, and head commit for version pinning
 //   magic here (which is xpki) | version u16 | count u32 | offsets[amount of count] u32 (sorted by name) | entries... | crc32 u32, the crc is required at the end to make sure the file isnt truncated, this can reallylyyyyy easily tell wether there is a crc mismatch with crc hashing
 fn encode_idx(allocator: std.mem.Allocator, entries: []types.Idxentry, head: [32]u8) ![]u8 {
+    //alphabetic. no real use, but its much cleaner for a literal binary searcher
     std.mem.sort(types.Idxentry, entries, {}, struct {
         fn lessThan(_: void, a: types.Idxentry, b: types.Idxentry) bool {
             return std.mem.order(u8, a.name, b.name) == .lt;

@@ -71,7 +71,7 @@ pub fn remote_fetch(io: std.Io, allocator: std.mem.Allocator, package: []const u
             continue;
         };
         defer allocator.free(parsed.offsets); // we free these cuz we don't need allat
-
+        // uses the parsed offset table and find_package to find the package
         if (types.find_package(indexbytes, parsed.offsets, parsed.entriesst, package)) |entry| {
             foundrepo = repo;
             foundpkg = entry;
@@ -80,12 +80,12 @@ pub fn remote_fetch(io: std.Io, allocator: std.mem.Allocator, package: []const u
     }
 
     const repo = foundrepo orelse {
-        print("package {s} doesn't exist in any enabled repo\n", .{package});
+        wprint("package {s} doesn't exist in any enabled repo\n", .{package});
         std.process.exit(1);
     };
 
     const pkg = foundpkg orelse {
-        print("package {s} doesn't exist in any enabled repo\n", .{package});
+        wprint("package {s} doesn't exist in any enabled repo\n", .{package});
         std.process.exit(1); // errors that happen a lot are ugly, thats why std.process.exit is used to not let that happen
     };
 

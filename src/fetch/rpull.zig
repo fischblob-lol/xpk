@@ -19,7 +19,7 @@ fn createdir(io: std.Io, path: []const u8) !void {
 fn rename(io: std.Io, old: []const u8, new: []const u8) !void {
     std.Io.Dir.renameAbsolute(old, new, io) catch |err| switch (err) {
         error.CrossDevice => {
-            // rename cannot cross filesystems, so we just stream and delete, also atomic so its better
+            // rename cannot cross filesystems, so we just stream and delete, also atomic so its better realistically
 
             const src = try std.Io.Dir.openFileAbsolute(io, old, .{});
             defer src.close(io);
@@ -105,65 +105,72 @@ pub fn init_repos(io: std.Io) !void {
 }
 
 // saves locally, for the repo name inscribed in /opt/xpk/repos/repos.conf (parser work)
-pub fn pull_repo(io: std.Io, allocator: std.mem.Allocator) !void {
+// concurrently, and this is just the old renamed torso for pull_repos, this gets a repo handed to it, and downloads it
+fn sync_repo(io: std.Io, allocator: std.mem.Allocator, repo: utils.parser.Repo) !void {
+    // globals are gonna make it much easier to port to linux later
+    const repopath = try std.fs.path.join(allocator, &.{ globals.local, repo.name });
+    defer allocator.free(repopath);
 
-    const reposbytes = try std.Io.Dir.cwd().readFileAlloc(io,globals.reposconf, allocator, .unlimited);
+    try createdir(io, repopath); // safe because if error it just catches null and exits only this not main problem
+
+    const indexurl = try std.fmt.allocPrint(
+        allocator,
+        "{s}/index.bin",
+        .{repo.url},
+    );
+    // urls forming
+    const keyringurl = try std.fmt.allocPrint(
+        allocator,
+        "{s}/trust/keyring.autm",
+        .{repo.url},
+    );
+
+    defer allocator.free(indexurl);
+    defer allocator.free(keyringurl);
+
+    // async time bitchh also download_repo now grows for async
+    var indexfut = io.async(downloader.download_repo, .{ io, allocator, indexurl, repo.name, false });
+    var keyringfut = io.async(downloader.download, .{ io, allocator, keyringurl, true });
+
+    const downloadedindex = try indexfut.await(io);
+    const downloadedkeyring = try keyringfut.await(io);
+
+    const indexpath = try std.fs.path.join(allocator, &.{ repopath, "index.bin" });
+    const keyringpath = try std.fs.path.join(allocator, &.{ repopath, "keyring.autm" });
+    defer allocator.free(indexpath);
+    defer allocator.free(keyringpath);
+    // renames the index.bin into the indexpath, clever little trick to just move file into another location, which is name of repo in /opt/xpk/repos + index.bin, simple
+    try rename(io, downloadedindex, indexpath);
+    try rename(io, downloadedkeyring, keyringpath);
+}
+
+// pulls repos and uses async
+pub fn pull_repo(io: std.Io, allocator: std.mem.Allocator) !void {
+    const reposbytes = try std.Io.Dir.cwd().readFileAlloc(io, globals.reposconf, allocator, .unlimited);
     defer allocator.free(reposbytes);
 
+    cprint("syncing repos...\n", .{});
 
-    const repos = try utils.parser.parse_r(allocator,reposbytes);
+    const repos = try utils.parser.parse_r(allocator, reposbytes);
     defer allocator.free(repos);
 
+    // rows grow as future expands
+    const Fut = @TypeOf(io.async(sync_repo, .{ io, allocator, repos[0] }));
+    var futures: std.ArrayList(Fut) = .empty;
+    defer futures.deinit(allocator);
 
     for (repos) |repo| {
-        if (!repo.enabled){
+        if (!repo.enabled) {
             continue;
         }
-        
-        // globals are gonna make it much easier to port to linux later
-        const repopath = try std.fs.path.join(allocator,&.{globals.local, repo.name});
-        defer allocator.free(repopath);
-
-        try createdir(io,repopath); // safe because if error it just catches null and exits only this not main problem
-
-        const indexurl = try std.fmt.allocPrint(
-            allocator,
-            "{s}/index.bin",
-            .{repo.url},
-        );
-        // 
-        const keyringurl = try std.fmt.allocPrint(
-            allocator,
-            "{s}/trust/keyring.autm",
-            .{repo.url}
-        );
-
-
-        defer allocator.free(indexurl);
-        defer allocator.free(keyringurl);
-
-
-        cprint("syncing {s}\n",.{repo.name});
-
-        // NO ASYNC YET ADD ASYNC LATER!!!
-        // NO ASYNC YET ADD ASYNC LATER!!!
-        // NO ASYNC YET ADD ASYNC LATER!!!
-        // NO ASYNC YET ADD ASYNC LATER!!!
-        // NO ASYNC YET ADD ASYNC LATER!!!
-        // soon guys trust
-        const downloadedindex = try downloader.download_repo(io,allocator, indexurl, repo.name, false);
-        const downloadedkeyring = try downloader.download(io, allocator, keyringurl, true);
-
-        const indexpath = try std.fs.path.join(allocator, &.{repopath, "index.bin"});
-        const keyringpath = try std.fs.path.join(allocator, &.{repopath, "keyring.autm"});
-        
-        defer allocator.free(indexpath);
-        defer allocator.free(keyringpath); 
-        
-        // renames the index.bin into the indexpath, clever little trick to just move file into another location, which is name of repo in /opt/xpk/repos + index.bin, simple
-        try rename(io, downloadedindex, indexpath);
-        try rename(io, downloadedkeyring, keyringpath);
-
-        iprint("repository {s} updated\n",.{repo.name});
+        try futures.append(allocator, io.async(sync_repo, .{ io, allocator, repo }));
     }
+
+    for (futures.items) |*futs| {
+        try futs.await(io);
+    }
+
+    iprint("all repositories up to date!\n", .{});
+
+    // we shouldn't put a newline here, always makes too much
 }

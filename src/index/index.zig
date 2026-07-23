@@ -33,7 +33,7 @@ inline fn writeU32(list: *std.ArrayList(u8), allocator: std.mem.Allocator, val: 
 }
 
 // encodes the whole entry list into the index.bin 
-//   "XPKI" | version u16 | count u32 | offsets[count] u32 (sorted by name) | entries... | crc32 u32
+//   magic here (which is xpki) | version u16 | count u32 | offsets[amount of count] u32 (sorted by name) | entries... | crc32 u32, the crc is required at the end to make sure the file isnt truncated, this can reallylyyyyy easily tell wether there is a crc mismatch with crc hashing
 fn encode_idx(allocator: std.mem.Allocator, entries: []types.Idxentry) ![]u8 {
     std.mem.sort(types.Idxentry, entries, {}, struct {
         fn lessThan(_: void, a: types.Idxentry, b: types.Idxentry) bool {
@@ -41,7 +41,7 @@ fn encode_idx(allocator: std.mem.Allocator, entries: []types.Idxentry) ![]u8 {
         }
     }.lessThan);
 
-    // encode entries standalone first so we know each blob's length for the offset table
+    // encode entries standalone, so we know length for offset table
     var entriesblob: std.ArrayList([]u8) = .empty;
     defer {
         for (entriesblob.items) |blob| allocator.free(blob);
@@ -60,7 +60,7 @@ fn encode_idx(allocator: std.mem.Allocator, entries: []types.Idxentry) ![]u8 {
     try writeU16(&out, allocator, FORMATVERS);
     try writeU32(&out, allocator, @intCast(entries.len));
 
-    // offset table -- running total of prior entry blob lengths
+    // offset table 
     var roffs: u32 = 0;
     for (entriesblob.items) |blob| {
         try writeU32(&out, allocator, roffs);
@@ -123,7 +123,7 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
             // desc is optional in the type, but the index wants a string for every entry.
             // rather than force unwrap and panic the whole index run over one sloppy package, it just empties it and warns so you actually write a desc
             const desc = xbuild.info.desc orelse blk: {
-                wprint("{s}/{s} has no desc in xbuild, defaulting to nothin\n", .{ category.name, package.name },);
+                wprint("{s}/{s} has no desc in xbuild, defaulting to nothing\n", .{ category.name, package.name },);
                 break :blk ""; // break loop, i hate that syntax 
             };
 
@@ -158,5 +158,6 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
     try writer.interface.flush();
 
     // also, later ill add a compression to the index.bin so for even more packages its compressed and is so much faster to download
+    // but ill do it only when we have like 30 packages
     iprint("indexed {d} packages\n", .{entries.items.len});
 }

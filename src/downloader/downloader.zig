@@ -13,7 +13,7 @@ fn createdir(io: std.Io, path: []const u8) !void {
     };
 }
 
-// returns path to downloaded file
+// returns path to downloaded file, this will stay but its gonna stay as a function for the multitool ill make with xpk later
 pub fn download(io: std.Io, allocator: std.mem.Allocator, url: []const u8, nobar: bool) ![]const u8 {
     const filename = std.fs.path.basename(url); // wow zig being beautiful
 
@@ -81,12 +81,12 @@ pub fn download(io: std.Io, allocator: std.mem.Allocator, url: []const u8, nobar
 
         downloaded += n;
 
-        if (nobar) continue; // skip all the printing entirely, just download
+        if (nobar) continue; // skip all the printing entirely, jus download
         
         if (hasvalidtotal) {
             const total = response.head.content_length.?;
 
-            const width = 50;
+            const width = 30;
             const filled = @min(downloaded * width / total, width);
             const percent = @min(downloaded * 100 / total, 100); // gaurd for too high
 
@@ -95,7 +95,7 @@ pub fn download(io: std.Io, allocator: std.mem.Allocator, url: []const u8, nobar
 
             for (0..width) |i| {
                 if (i < filled) {
-                    print("=", .{});
+                    print("#", .{});
                 } else {
                     print(" ", .{});
                 }
@@ -120,7 +120,6 @@ pub fn download(io: std.Io, allocator: std.mem.Allocator, url: []const u8, nobar
         } else {
             // no content length here, so we just have a simple spinner so it looks alright anyways
             // so i need to figure out a way to not get this spinner for github
-            // holy shit am i sleepy
             spinframe +%= 1;
             const spinner = [_]u8{ '|', '/', '-', '\\' };
             const frame = spinner[spinframe % spinner.len];
@@ -144,7 +143,32 @@ pub fn download(io: std.Io, allocator: std.mem.Allocator, url: []const u8, nobar
     return outputpath;
 }
 
+// first time using mutex! kinda nervous....
+var mutex: std.Io.Mutex = .init;
+// jumps the cursor up from the reserved bottom line to this download's row and clears it
 
+var trows: usize = 0; // grows as repos start, never shrinks
+
+fn moveto(row: usize) void {
+    // reads live rows
+    const up = trows - row;
+    print("\x1b[{d}A\r\x1b[2K", .{up});
+}
+
+fn moveback(row: usize) void {
+    const up = trows - row;
+    print("\x1b[{d}B\r", .{up});
+}
+
+// growing, claim_row
+fn claim_r(io: std.Io) !usize {
+    try mutex.lock(io);
+    defer mutex.unlock(io);
+    const row = trows;
+    trows += 1;
+    print("\n", .{}); // grow the reserved block by exactly one line, will change later tho to append 3 at the start, or 2
+    return row;
+}
 
 pub fn download_repo(io: std.Io, allocator: std.mem.Allocator, url: []const u8, name: []const u8, nobar: bool) ![]const u8 {
     const filename = std.fs.path.basename(url); // wow zig being beautiful
@@ -172,7 +196,6 @@ pub fn download_repo(io: std.Io, allocator: std.mem.Allocator, url: []const u8, 
 
     var redirectbuf: [1024]u8 = undefined;
     var response = try req.receiveHead(&redirectbuf); // yeah man i recieve head too
-
 
     // straight from src/installer/downloader.zig
     var transferbuf: [4096]u8 = undefined;
@@ -202,6 +225,8 @@ pub fn download_repo(io: std.Io, allocator: std.mem.Allocator, url: []const u8, 
     // so only show bar when we know content-length matches the stream
     const hasvalidtotal = response.head.content_length != null and
         response.head.content_encoding == .identity;
+    //row
+    var row: ?usize = null;
 
     //streaming logic for bar, also added checks for how big the file is so it can adjust its decimal points from kib to mib, will add gb but only later for larger packages
     while (true) {
@@ -213,8 +238,20 @@ pub fn download_repo(io: std.Io, allocator: std.mem.Allocator, url: []const u8, 
 
         downloaded += n;
 
-        if (nobar) continue; // skip all the printing entirely, just download
-        
+        if (nobar) continue; // skip all the printing, useful when downloading the keyring files because logic remains but bar goes away
+
+        try mutex.lock(io);
+        defer mutex.unlock(io);
+
+        if (row == null) row = blk: {
+            const r = trows;
+            trows += 1;
+            print("\n", .{});
+            break :blk r;
+        };
+
+        moveto(row.?);
+
         if (hasvalidtotal) {
             const total = response.head.content_length.?;
 
@@ -222,10 +259,7 @@ pub fn download_repo(io: std.Io, allocator: std.mem.Allocator, url: []const u8, 
             const filled = @min(downloaded * width / total, width);
             const percent = @min(downloaded * 100 / total, 100); // gaurd for too high
 
-
-            print("\x1b[2K\r{s} [", .{name});
-            
-            //print("\r[", .{});
+            print("{s} [", .{name});
 
             for (0..width) |i| {
                 if (i < filled) {
@@ -259,24 +293,20 @@ pub fn download_repo(io: std.Io, allocator: std.mem.Allocator, url: []const u8, 
             const spinner = [_]u8{ '|', '/', '-', '\\' };
             const frame = spinner[spinframe % spinner.len];
 
-
             const downloadsize = @as(f64, @floatFromInt(downloaded));
 
             // same logic
             if (downloaded < 1024 * 1024) {
-                print("\x1b[2K\r[{c}] [{s}] downloading... {d:.1} KiB", .{ frame, name, downloadsize / 1024 });
+                print("[{c}] [{s}] downloading... {d:.1} KiB", .{ frame, name, downloadsize / 1024 });
             } else {
-                print("\x1b[2K\r[{c}] [{s}] downloading... {d:.2} MiB", .{frame, name, downloadsize / 1024 / 1024 });
+                print("[{c}] [{s}] downloading... {d:.2} MiB", .{ frame, name, downloadsize / 1024 / 1024 });
             }
         }
-    }
 
-    // newline because that one doesn't make one
-    if (!nobar) print("\n", .{});
+        moveback(row.?);
+    }
 
     try writer.flush(); // flush because _______________
 
     return outputpath;
 }
-
-

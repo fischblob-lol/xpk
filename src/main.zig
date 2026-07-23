@@ -99,7 +99,7 @@ pub fn main(init: std.process.Init) !void {
     // args[1] is cmd.
 
     if (args.len < 2) {
-        wprint("usage: xpk <action> for more info do 'xpk help'\n", .{});
+        iprint("usage: xpk <action> for more info do 'xpk help'\n", .{});
         return;
     } else 
     

@@ -128,13 +128,13 @@ pub fn pull_repo(io: std.Io, allocator: std.mem.Allocator) !void {
 
         const indexurl = try std.fmt.allocPrint(
             allocator,
-            "{s}/index.json",
+            "{s}/index.bin",
             .{repo.url},
         );
         // 
         const keyringurl = try std.fmt.allocPrint(
             allocator,
-            "{s}/trust/keyring.json",
+            "{s}/trust/keyring.autm",
             .{repo.url}
         );
 
@@ -150,17 +150,17 @@ pub fn pull_repo(io: std.Io, allocator: std.mem.Allocator) !void {
         // NO ASYNC YET ADD ASYNC LATER!!!
         // NO ASYNC YET ADD ASYNC LATER!!!
         // NO ASYNC YET ADD ASYNC LATER!!!
-        // aka tmrw
+        // soon guys trust
         const downloadedindex = try downloader.download_repo(io,allocator, indexurl, repo.name, false);
         const downloadedkeyring = try downloader.download(io, allocator, keyringurl, true);
 
-        const indexpath = try std.fs.path.join(allocator, &.{repopath, "index.json"});
-        const keyringpath = try std.fs.path.join(allocator, &.{repopath, "keyring.json"});
+        const indexpath = try std.fs.path.join(allocator, &.{repopath, "index.bin"});
+        const keyringpath = try std.fs.path.join(allocator, &.{repopath, "keyring.autm"});
         
         defer allocator.free(indexpath);
         defer allocator.free(keyringpath); 
         
-        // renames the index.json into the indexpath, clever little trick to just move file into another location, which is name of repo in /opt/xpk/repos + index.json, simple
+        // renames the index.bin into the indexpath, clever little trick to just move file into another location, which is name of repo in /opt/xpk/repos + index.bin, simple
         try rename(io, downloadedindex, indexpath);
         try rename(io, downloadedkeyring, keyringpath);
 

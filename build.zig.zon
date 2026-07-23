@@ -3,8 +3,8 @@
     .version = "0.16.0",
     .dependencies = .{ // yooo i made this
         .automl = .{
-            .url = "git+https://github.com/aureliusxyz/automl#0929f435cbf7c758430cee76bbbdd230a1f59479",
-            .hash = "automl-0.1.0-9tf8Ch25AAD20z-kouOjLzM6vksfKThrzVI9QSrV1QqK",
+            .url = "git+https://github.com/aureliusxyz/automl#1117628cc7a54ff9d0b16058f978234f88cd5aa3",
+            .hash = "automl-0.1.0-9tf8Ck25AABVWQG53TbN_qcqCpAVKNaxha-xHhesIS-v",
         },
     },
     .paths = .{""},

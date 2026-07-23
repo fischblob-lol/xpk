@@ -20,6 +20,12 @@ pub fn build(b: *std.Build) void {
     const utils = b.createModule(.{
         .root_source_file = b.path("src/utils/utils.zig"),
     });
+
+    const parser = b.createModule(.{
+        .root_source_file = b.path("src/parsers/parsers.zig"),
+    });
+
+ 
     const exe = b.addExecutable(.{
         .name = "xpk",
         .root_module = b.createModule(.{
@@ -30,14 +36,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    const parser = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/parsers/parser_test.zig"),
-            .target = target,
-            .optimize = if (release) .ReleaseFast else if (small) .ReleaseSmall else .Debug,
-        })
-       
-    });
+
 
     const hasher = b.addTest(.{
         .root_module = b.createModule(.{
@@ -46,41 +45,30 @@ pub fn build(b: *std.Build) void {
             .optimize = if (release) .ReleaseFast else if (small) .ReleaseSmall else .Debug,
         })
     });
+
+    const parsers = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/parsers/parsers_test.zig"),
+            .target = target,
+            .optimize = if (release) .ReleaseFast else if (small) .ReleaseSmall else .Debug,
+        })
+    });
     
-    const repoparse = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/parsers/repos/repos_test.zig"),
-            .target = target,
-            .optimize = if (release) .ReleaseFast else if (small) .ReleaseSmall else .Debug,
-        })
-    });
-
-    const keyringparse = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/parsers/keyring/keyring_test.zig"),
-            .target = target,
-            .optimize = if (release) .ReleaseFast else if (small) .ReleaseSmall else .Debug,
-        })
-    });
-
-
+    
     const automl = b.dependency("automl", .{
         .target = target,
     });
-
-
     
-    const parsertests = b.addRunArtifact(parser);
+   
     const hashertests = b.addRunArtifact(hasher);
-    const repotests = b.addRunArtifact(repoparse);
-    const keyringtests = b.addRunArtifact(keyringparse);
+    const parsertests = b.addRunArtifact(parsers);
     const tests = b.step("test", "run parser tests"); // an arg
     tests.dependOn(&hashertests.step);
     tests.dependOn(&parsertests.step);
-    tests.dependOn(&repotests.step);
-    tests.dependOn(&keyringtests.step);
-
-    exe.root_module.addImport("automl", automl.module("automl"));
+  
+    
+    parser.addImport("automl", automl.module("automl"));
+    parsers.root_module.addImport("automl", automl.module("automl"));
     exe.root_module.addImport("utils", utils);
     b.installArtifact(exe);
 }

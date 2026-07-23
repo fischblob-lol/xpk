@@ -15,10 +15,72 @@ inline fn wprint(comptime fmt: []const u8, args: anytype) void {
     print("[!] " ++ fmt, args);
 }
 
+// magic bytes for index.bin, so you can instantly tell from a xxd/hexdump, and because it looks fucking awesome and cool tbh
+const MAGIC = "XPKI";
+const FORMATVERS: u16 = 1;
+
+// i need these guys, since we are actually writing hex now
+inline fn writeU16(list: *std.ArrayList(u8), allocator: std.mem.Allocator, val: u16) !void {
+    var buf: [2]u8 = undefined;
+    std.mem.writeInt(u16, &buf, val, .little);
+    try list.appendSlice(allocator, &buf);
+}
+
+inline fn writeU32(list: *std.ArrayList(u8), allocator: std.mem.Allocator, val: u32) !void {
+    var buf: [4]u8 = undefined;
+    std.mem.writeInt(u32, &buf, val, .little);
+    try list.appendSlice(allocator, &buf);
+}
+
+// encodes the whole entry list into the index.bin 
+//   "XPKI" | version u16 | count u32 | offsets[count] u32 (sorted by name) | entries... | crc32 u32
+fn encode_idx(allocator: std.mem.Allocator, entries: []types.Idxentry) ![]u8 {
+    std.mem.sort(types.Idxentry, entries, {}, struct {
+        fn lessThan(_: void, a: types.Idxentry, b: types.Idxentry) bool {
+            return std.mem.order(u8, a.name, b.name) == .lt;
+        }
+    }.lessThan);
+
+    // encode entries standalone first so we know each blob's length for the offset table
+    var entriesblob: std.ArrayList([]u8) = .empty;
+    defer {
+        for (entriesblob.items) |blob| allocator.free(blob);
+        entriesblob.deinit(allocator);
+    }
+
+    for (entries) |entry| {
+        const blob = try entry.encode(allocator);
+        try entriesblob.append(allocator, blob);
+    }
+
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(allocator);
+
+    try out.appendSlice(allocator, MAGIC);
+    try writeU16(&out, allocator, FORMATVERS);
+    try writeU32(&out, allocator, @intCast(entries.len));
+
+    // offset table -- running total of prior entry blob lengths
+    var roffs: u32 = 0;
+    for (entriesblob.items) |blob| {
+        try writeU32(&out, allocator, roffs);
+        roffs += @intCast(blob.len);
+    }
+
+    for (entriesblob.items) |blob| {
+        try out.appendSlice(allocator, blob);
+    }
+
+    // crc32 over everything written so far, because resolvers can tell this one, and its pretty unique??? 
+    const crc = std.hash.Crc32.hash(out.items);
+    try writeU32(&out, allocator, crc);
+
+    return out.toOwnedSlice(allocator);
+}
 
 // indexes a repo from a path and recursively generates a idxentry per package, also has someee debug output but ill prob wire up alot more 
-// will rewrite for own binary custom format when more then 200 packages cumulate, so the index file is easier to handle
-// this is more of a developer exclusive use tool, as its made for generating repos instead of updating
+// now writes its own binary format (index.bin) instead of json
+// this is more of a developer exclusive use tool, as its made for generating repos instead of updating, however users can obviously just use this tool to wire up their own repos
 pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8) !void {
     var entries: std.ArrayList(types.Idxentry) = .empty;
     defer entries.deinit(allocator);
@@ -65,7 +127,7 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
                 break :blk ""; // break loop, i hate that syntax 
             };
 
-            // appends everything so it can put it into a json format, unrolled for readability 
+            // appends everything so it can put it into the binary blob, unrolled for readability 
             try entries.append(allocator, .{
                 .name = try allocator.dupe(u8, xbuild.info.name),
                 .category = try allocator.dupe(u8, category.name),
@@ -78,21 +140,21 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
         }
     }
 
-    // here that happens
-    const indexjson = try std.json.Stringify.valueAlloc(allocator, entries.items,.{.whitespace = .indent_2}); // indent_2 cuz easy to read
-    defer allocator.free(indexjson);
+    // here that happens, we encode the blob
+    const indexbin = try encode_idx(allocator, entries.items);
+    defer allocator.free(indexbin);
 
-    const idxjson = try std.fmt.allocPrint(allocator, "{s}/index.json", .{repopath});
-    defer allocator.free(idxjson);
+    const idxbin = try std.fmt.allocPrint(allocator, "{s}/index.bin", .{repopath});
+    defer allocator.free(idxbin);
 
     // final things + write stuff
-    const indexfile = try std.Io.Dir.createFileAbsolute(io, idxjson, .{ .truncate = true });
+    const indexfile = try std.Io.Dir.createFileAbsolute(io, idxbin, .{ .truncate = true });
     defer indexfile.close(io);
 
     var writerbuf: [16 * 1024]u8 = undefined;
     var writer = indexfile.writer(io, &writerbuf);
 
-    try writer.interface.writeAll(indexjson);
+    try writer.interface.writeAll(indexbin);
     try writer.interface.flush();
 
     iprint("indexed {d} packages\n", .{entries.items.len});

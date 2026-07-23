@@ -1,6 +1,6 @@
 //! rework
 //! remote fetch now assumes index is local, helps with speeds a lot because we split downloads on repos
-//! although i dislike the json format, ill probably make my own later (but currently, due to parsing speeds json is the best)
+//! switched index.json to index.bin, own format now. yay.
 //! yeah.
 
 const std = @import("std");
@@ -24,7 +24,7 @@ inline fn wprint(comptime fmt: []const u8, args: anytype) void {
     print("[!] " ++ fmt, args);
 }
 
-// taken from neo, only thing implemented new is the limit, so malicious gigantic package specs/infos cant lag you (unless you are lacking 8392 bytes of ram)
+// taken from neo, only thing implemented new is the limit, so malicious gigantic package specs/infos cant lag you (unless you are lacking 8192 bytes of ram)
 fn fetchraw(allocator: std.mem.Allocator, io: std.Io, url: []const u8) ![]u8 {
     var client = std.http.Client{ .allocator = allocator, .io = io };
     defer client.deinit();
@@ -45,11 +45,8 @@ fn fetchraw(allocator: std.mem.Allocator, io: std.Io, url: []const u8) ![]u8 {
     return try reader.allocRemaining(allocator, .limited(8192));
 }
 
-// checks your index.json's from each repo, 
+// checks your index.bin's from each repo
 pub fn remote_fetch(io: std.Io, allocator: std.mem.Allocator, package: []const u8) !types.Pkgurl {
-    var client = std.http.Client{ .allocator = allocator, .io = io }; // fresh client each time, no keepalive shit
-    defer client.deinit();
-
     const reposbytes = try std.Io.Dir.cwd().readFileAlloc(io, globals.reposconf, allocator, .unlimited);
     defer allocator.free(reposbytes);
 
@@ -62,24 +59,24 @@ pub fn remote_fetch(io: std.Io, allocator: std.mem.Allocator, package: []const u
     for (repos) |repo| {
         if (!repo.enabled) continue;
 
-        const indexpath = try std.fs.path.join(allocator, &.{ globals.local, repo.name, "index.json" });
-        // i had a fuckass error here where i freed
+        const indexpath = try std.fs.path.join(allocator, &.{ globals.local, repo.name, "index.bin" });
+        defer allocator.free(indexpath);
 
+        // we dont free here for a REASON its in a FOR LOOP
         const indexbytes = std.Io.Dir.cwd().readFileAlloc(io, indexpath, allocator, .unlimited) catch continue;
-        
 
-        const parsed = try std.json.parseFromSlice([]types.Idxentry, allocator, indexbytes, .{});
-    
+        // also can notice malformed ones if it fails, so its a really nice change really
+        const parsed = types.parse_idx(indexbytes, allocator) catch |err| {
+            wprint("{s}'s index.bin is malformed ({s}), skipping repo\n", .{ repo.name, @errorName(err) });
+            continue;
+        };
+        defer allocator.free(parsed.offsets); // we free these cuz we don't need allat
 
-        for (parsed.value) |entry| {
-            if (std.mem.eql(u8, entry.name, package)) {
-                foundrepo = repo;
-                foundpkg = entry;
-                break;
-            }
+        if (types.find_package(indexbytes, parsed.offsets, parsed.entriesst, package)) |entry| {
+            foundrepo = repo;
+            foundpkg = entry;
+            break;
         }
-
-        if (foundpkg != null) break;
     }
 
     const repo = foundrepo orelse {
@@ -89,7 +86,7 @@ pub fn remote_fetch(io: std.Io, allocator: std.mem.Allocator, package: []const u
 
     const pkg = foundpkg orelse {
         print("package {s} doesn't exist in any enabled repo\n", .{package});
-        std.process.exit(1); // errors that happen a lot are ugly, thats why std.process.exit is used
+        std.process.exit(1); // errors that happen a lot are ugly, thats why std.process.exit is used to not let that happen
     };
 
     const path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ pkg.category, pkg.name });

@@ -3,3 +3,4 @@ zig-out/
 *.o
 .venv/ 
 docs/build
+zig-pkg/

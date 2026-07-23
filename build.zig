@@ -1,5 +1,6 @@
 const std = @import("std");
 
+
 // do not recommend building with release, as this is mostly io stuff and moving files, so making the binary smaller is the better choice
 pub fn build(b: *std.Build) void {
     const release = b.option(bool, "release", "strip debug + optimize") orelse false;
@@ -61,6 +62,13 @@ pub fn build(b: *std.Build) void {
             .optimize = if (release) .ReleaseFast else if (small) .ReleaseSmall else .Debug,
         })
     });
+
+
+    const automl = b.dependency("automl", .{
+        .target = target,
+    });
+
+
     
     const parsertests = b.addRunArtifact(parser);
     const hashertests = b.addRunArtifact(hasher);
@@ -72,7 +80,7 @@ pub fn build(b: *std.Build) void {
     tests.dependOn(&repotests.step);
     tests.dependOn(&keyringtests.step);
 
-
+    exe.root_module.addImport("automl", automl.module("automl"));
     exe.root_module.addImport("utils", utils);
     b.installArtifact(exe);
 }

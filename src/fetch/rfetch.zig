@@ -11,6 +11,22 @@ const utils = @import("../utils/utils.zig");
 
 const print = std.debug.print;
 
+fn build_url(allocator: std.mem.Allocator, repourl: []const u8, headstr: []const u8,subpath: []const u8) ![]u8 {
+    if (std.mem.indexOf(u8, repourl, "github") != null) {
+        // repourl = ".../<owner>/<repo>/<branch>", we want ".../<owner>/<repo>/<headstr>"  
+        const branchstart = std.mem.lastIndexOfScalar(u8, repourl, '/') orelse {
+            // no '/' found at all, malformed url, just fall through unpinned, and probably fail
+            return try std.fmt.allocPrint(allocator, "{s}/{s}", .{ repourl, subpath });
+        };
+        const base = repourl[0..branchstart];
+        return try std.fmt.allocPrint(allocator, "{s}/{s}/{s}", .{ base, headstr, subpath });
+    } 
+
+    // add elsestatemnts: codeberg.org / raw.codeberg.org uses a different raw-url shape
+    
+    // unknown host, so just return normally
+    return try std.fmt.allocPrint(allocator, "{s}/{s}", .{ repourl, subpath });
+}
 
 inline fn errprint(comptime fmt: []const u8, args: anytype) void {
     print("[x] " ++ fmt, args);
@@ -45,6 +61,13 @@ fn fetchraw(allocator: std.mem.Allocator, io: std.Io, url: []const u8) ![]u8 {
     return try reader.allocRemaining(allocator, .limited(8192));
 }
 
+fn format_head(allocator: std.mem.Allocator, head: [32]u8) ![]u8 {
+    const issha1 = std.mem.allEqual(u8, head[20..32], 0);
+    const len: usize = if (issha1) 20 else 32;
+
+    return try std.fmt.allocPrint(allocator, "{x}", .{head[0..len]});
+}
+
 // checks your index.bin's from each repo
 pub fn remote_fetch(io: std.Io, allocator: std.mem.Allocator, package: []const u8) !types.Pkgurl {
     const reposbytes = try std.Io.Dir.cwd().readFileAlloc(io, globals.reposconf, allocator, .unlimited);
@@ -55,6 +78,7 @@ pub fn remote_fetch(io: std.Io, allocator: std.mem.Allocator, package: []const u
 
     var foundrepo: ?utils.parser.Repo = null;
     var foundpkg: ?types.Idxentry = null;
+    var foundhead: [32]u8 = undefined;
 
     for (repos) |repo| {
         if (!repo.enabled) continue;
@@ -65,16 +89,17 @@ pub fn remote_fetch(io: std.Io, allocator: std.mem.Allocator, package: []const u
         // we dont free here for a REASON its in a FOR LOOP
         const indexbytes = std.Io.Dir.cwd().readFileAlloc(io, indexpath, allocator, .unlimited) catch continue;
 
-        // also can notice malformed ones if it fails, so its a really nice change really
         const parsed = types.parse_idx(indexbytes, allocator) catch |err| {
             wprint("{s}'s index.bin is malformed ({s}), skipping repo\n", .{ repo.name, @errorName(err) });
             continue;
         };
-        defer allocator.free(parsed.offsets); // we free these cuz we don't need allat
+        defer allocator.free(parsed.offsets); // we free these cuz we don't need allat after the for statement
+
         // uses the parsed offset table and find_package to find the package
         if (types.find_package(indexbytes, parsed.offsets, parsed.entriesst, package)) |entry| {
             foundrepo = repo;
             foundpkg = entry;
+            foundhead = parsed.head;
             break;
         }
     }
@@ -89,12 +114,19 @@ pub fn remote_fetch(io: std.Io, allocator: std.mem.Allocator, package: []const u
         std.process.exit(1); // errors that happen a lot are ugly, thats why std.process.exit is used to not let that happen
     };
 
-    const path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ pkg.category, pkg.name });
+
+    // formats head for sha1/sha256 git head, since xpk-c currently uses sha1, we just do that, but it supports repos with git sha-256!
+    const headstr = try format_head(allocator, foundhead);
+    defer allocator.free(headstr);
+
+
+    const path = try std.fmt.allocPrint(allocator, "{s}/{s}/xbuild", .{ pkg.category, pkg.name });
     defer allocator.free(path);
 
-    // one call now, way more efficent
-    const xbuildurl = try std.fmt.allocPrint(allocator, "{s}/{s}/xbuild", .{ repo.url, path });
+    // pins the fetch to the exact commit the index was generated from instead of just getting things from latest commit, this is good for both safety and reliablity, because syncing = downloading a newer commit with newer hash, which means newer versions, unlike old syncing that was just adding packages
+    const xbuildurl = try build_url(allocator, repo.url, headstr, path);
     defer allocator.free(xbuildurl);
+
 
     iprint("getting remote build files...\n", .{});
 

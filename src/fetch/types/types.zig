@@ -59,26 +59,40 @@ pub const Idxentry = struct {
     }
 };
 
-pub const Indexerror = error{ badmagic, unsupportedvers, crcmismatch, truncated };
+pub const Idxerror = error{ badmagic, unsupportedvers, crcmismatch, truncated };
 
 const Parsedidx = struct {
+    head: [32]u8,
     offsets: []u32,
     entriesst: usize,
 };
 
 // walks the header, validates magic/version/crc, hands back the offset table, god i fucking love tables, just tables all over sql shit ykkkkk
 pub fn parse_idx(buf: []const u8, allocator: std.mem.Allocator) !Parsedidx {
-    if (buf.len < 10 + 4) return Indexerror.truncated; // header + at least the crc
+    if (buf.len < 42 + 4) return Idxerror.truncated;
 
-    if (!std.mem.eql(u8, buf[0..4], "XPKI")) return Indexerror.badmagic;
+    if (!std.mem.eql(u8, buf[0..4], "XPKI")) return Idxerror.badmagic;
 
     var pos: usize = 4;
     const version = std.mem.readInt(u16, buf[pos..][0..2], .little);
     pos += 2;
-    if (version != 1) return Indexerror.unsupportedvers;
+    if (version != 1) return Idxerror.unsupportedvers;
+
+    var head: [32]u8 = undefined;
+    @memcpy(&head, buf[pos..][0..32]);
+    pos += 32;
 
     const count = std.mem.readInt(u32, buf[pos..][0..4], .little);
     pos += 4;
+
+    // make sure there is room for offsets and crc, if there aint, then return truncated error
+    const offsbytes: u64 = @as(u64, count) * 4;
+    if (buf.len < pos + offsbytes + 4) return Idxerror.truncated;
+
+    // now its safe to check crc and such
+    const storedcrc = std.mem.readInt(u32, buf[buf.len - 4 ..][0..4], .little);
+    const expectedcrc = std.hash.Crc32.hash(buf[0 .. buf.len - 4]);
+    if (storedcrc != expectedcrc) return Idxerror.crcmismatch;
 
     const offsets = try allocator.alloc(u32, count);
     errdefer allocator.free(offsets);
@@ -89,18 +103,14 @@ pub fn parse_idx(buf: []const u8, allocator: std.mem.Allocator) !Parsedidx {
 
     const entriesst = pos;
 
-    const storedcrc = std.mem.readInt(u32, buf[buf.len - 4 ..][0..4], .little);
-    const expectedcrc = std.hash.Crc32.hash(buf[0 .. buf.len - 4]);
-    if (storedcrc != expectedcrc) return Indexerror.crcmismatch;
-
-    return .{ .offsets = offsets, .entriesst = entriesst };
+    return .{ .head = head, .offsets = offsets, .entriesst = entriesst };
 }
 
-// binary search over the sorted offset table 
+// binary search over the sorted offset table, its basically a binary searcher which is super quick
 pub fn find_package(buf: []const u8, offsets: []const u32, entriesst: usize, name: []const u8) ?Idxentry {
     var lo: usize = 0;
     var hi: usize = offsets.len;
-    while (lo < hi) {
+    while (lo < hi) { // walk and debyg
         const mid = lo + (hi - lo) / 2;
         const entry = Idxentry.decode(buf, entriesst + offsets[mid]);
         switch (std.mem.order(u8, entry.name, name)) {

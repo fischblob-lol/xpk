@@ -153,24 +153,40 @@ pub fn pull_repo(io: std.Io, allocator: std.mem.Allocator) !void {
 
     const repos = try utils.parser.parse_r(allocator, reposbytes);
     defer allocator.free(repos);
+    
+    if (repos.len == 0) {
+        iprint("no repositories configured\n", .{});
+        return;
+    }
 
-    // rows grow as future expands
     const Fut = @TypeOf(io.async(sync_repo, .{ io, allocator, repos[0] }));
     var futures: std.ArrayList(Fut) = .empty;
     defer futures.deinit(allocator);
 
+    // keep repo names lined up with futures so we can report which one failed
+    var names: std.ArrayList([]const u8) = .empty;
+    defer names.deinit(allocator);
+
     for (repos) |repo| {
-        if (!repo.enabled) {
-            continue;
-        }
+        if (!repo.enabled) continue;
         try futures.append(allocator, io.async(sync_repo, .{ io, allocator, repo }));
+        try names.append(allocator, repo.name);
     }
 
-    for (futures.items) |*futs| {
-        try futs.await(io);
+    var failures: usize = 0;
+
+    for (futures.items, 0..) |*futs, i| {
+        futs.await(io) catch |err| {
+            wprint("failed to sync {s}: {s}, skipping\n", .{ names.items[i], @errorName(err) });
+            failures += 1;
+            continue;
+        };
     }
-
-    iprint("all repositories up to date!\n", .{});
-
-    // we shouldn't put a newline here, always makes too much
+    // usually all repos failed to sync means your internet isnt fucking working
+    if (failures == futures.items.len and futures.items.len > 0) {
+        errprint("all repositories failed to sync, are you sure you are online?\n", .{});
+    } else {
+        iprint("all repositories up to date!\n", .{});
+    }
 }
+

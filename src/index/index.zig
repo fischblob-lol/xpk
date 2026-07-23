@@ -32,9 +32,9 @@ inline fn writeU32(list: *std.ArrayList(u8), allocator: std.mem.Allocator, val: 
     try list.appendSlice(allocator, &buf);
 }
 
-// encodes the whole entry list into the index.bin 
+// encodes the whole entry list into the index.bin, and head commit for version pinning
 //   magic here (which is xpki) | version u16 | count u32 | offsets[amount of count] u32 (sorted by name) | entries... | crc32 u32, the crc is required at the end to make sure the file isnt truncated, this can reallylyyyyy easily tell wether there is a crc mismatch with crc hashing
-fn encode_idx(allocator: std.mem.Allocator, entries: []types.Idxentry) ![]u8 {
+fn encode_idx(allocator: std.mem.Allocator, entries: []types.Idxentry, head: [32]u8) ![]u8 {
     std.mem.sort(types.Idxentry, entries, {}, struct {
         fn lessThan(_: void, a: types.Idxentry, b: types.Idxentry) bool {
             return std.mem.order(u8, a.name, b.name) == .lt;
@@ -58,6 +58,7 @@ fn encode_idx(allocator: std.mem.Allocator, entries: []types.Idxentry) ![]u8 {
 
     try out.appendSlice(allocator, MAGIC);
     try writeU16(&out, allocator, FORMATVERS);
+    try out.appendSlice(allocator, &head); // fixed 32 bytes, if its padded sure fine, if its not padded then great, i recommend yall to use git sha-256, since i support it
     try writeU32(&out, allocator, @intCast(entries.len));
 
     // offset table 
@@ -77,7 +78,6 @@ fn encode_idx(allocator: std.mem.Allocator, entries: []types.Idxentry) ![]u8 {
 
     return out.toOwnedSlice(allocator);
 }
-
 // indexes a repo from a path and recursively generates a idxentry per package, also has someee debug output but ill prob wire up alot more 
 // now writes its own binary format (index.bin) instead of json
 // this is more of a developer exclusive use tool, as its made for generating repos instead of updating, however users can obviously just use this tool to wire up their own repos
@@ -85,6 +85,8 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
     var entries: std.ArrayList(types.Idxentry) = .empty;
     defer entries.deinit(allocator);
 
+    const head = try get_head(io, allocator, repopath);
+    
     var dir = try std.Io.Dir.openDirAbsolute(io, repopath, .{ .iterate = true });
     defer dir.close(io);
 
@@ -111,7 +113,7 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
 
             const bytes = std.Io.Dir.cwd().readFileAlloc(io, buildpath, allocator, .unlimited) catch |err| switch (err) {
                 error.FileNotFound => {
-                    wprint("{s}/{s} has no xbuild, skipping\n", .{ category.name, package.name });
+                    wprint("{s}/{s} has no xbuild, skipping\n", .{ category.name, package.name }); 
                     continue;
                 }, else => return err,
             };
@@ -140,8 +142,8 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
         }
     }
 
-    // here that happens, we encode the blob
-    const indexbin = try encode_idx(allocator, entries.items);
+    // here that happens, we encode the blob 
+    const indexbin = try encode_idx(allocator, entries.items, head); 
     defer allocator.free(indexbin);
 
     const idxbin = try std.fmt.allocPrint(allocator, "{s}/index.bin", .{repopath});
@@ -160,4 +162,71 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
     // also, later ill add a compression to the index.bin so for even more packages its compressed and is so much faster to download
     // but ill do it only when we have like 30 packages
     iprint("indexed {d} packages\n", .{entries.items.len});
+}
+
+// gets head directly from file so we dont use git as a dep,
+// but you do need a git initialized for this to work, otherwise its just gonna fail at line at headfile
+fn get_head(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8) ![32]u8 { // :drooling emoji:
+    const gheadpath = try std.fs.path.join(allocator, &.{ repopath, ".git", "HEAD" });
+    defer allocator.free(gheadpath);
+
+    const headfile = try std.Io.Dir.cwd().readFileAlloc(
+        io,
+        gheadpath,
+        allocator,
+        .unlimited,
+    );
+    defer allocator.free(headfile);
+
+    const head = std.mem.trim(u8, headfile, " \n\r\t");
+
+    var hashedtext: []const u8 = undefined;
+
+    if (std.mem.startsWith(u8, head, "ref: ")) {
+        // normal branch
+        const ref = std.mem.trim(
+            u8,
+            head["ref: ".len..],
+            " \n\r\t",
+        );
+
+        const refpath = try std.fs.path.join(
+            allocator,
+            &.{ repopath, ".git", ref },
+        );
+        defer allocator.free(refpath);
+
+        const reffile = try std.Io.Dir.cwd().readFileAlloc(
+            io,
+            refpath,
+            allocator,
+            .unlimited,
+        );
+        
+
+        hashedtext = std.mem.trim(u8, reffile, " \n\r\t");
+    } else {
+        // detached HEAD, hash is directly in HEAD, we usually dont want this though
+        hashedtext = head;
+    }
+
+    var result: [32]u8 = undefined;
+    @memset(&result, 0);
+   
+   // logic checking for sha types
+    if (hashedtext.len == 40) {
+    // sha1
+        var sha1: [20]u8 = undefined;
+        _ = try std.fmt.hexToBytes(&sha1, hashedtext);
+        @memset(&result, 0);
+        @memcpy(result[0..20], &sha1);
+    } else if (hashedtext.len == 64) {
+    // sha256 (just for support)
+        _ = try std.fmt.hexToBytes(&result, hashedtext);
+    } else { 
+        return error.invalidcommithash;
+    }
+    
+
+    return result;
 }

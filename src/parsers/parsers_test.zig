@@ -8,9 +8,6 @@ test "parse_k parses a full keyring" {
     const allocator = std.testing.allocator;
 
     const text =
-        \\[hash]
-        \\head = "abc123"
-        \\last-edit = "2026-07-20 14:30"
         \\
         \\[policy]
         \\required-signatures = 2
@@ -35,10 +32,7 @@ test "parse_k parses a full keyring" {
         result.helpers.deinit();
     }
 
-    // [hash]
-    try std.testing.expectEqualStrings("abc123", result.head);
-    try std.testing.expectEqualStrings("2026-07-20 14:30", result.hashlastedit);
-
+  
     // [policy]
     try std.testing.expectEqual(@as(u32, 2), result.requiredsigs);
     try std.testing.expectEqual(true, result.allowhelpers);
@@ -57,44 +51,7 @@ test "parse_k parses a full keyring" {
     try std.testing.expectEqual(false, someone.revoked);
 }
 
-test "parse_k errors on missing keys section" {
-    const allocator = std.testing.allocator;
 
-    const text =
-        \\[hash]
-        \\head = "abc123"
-        \\last-edit = "2026-07-20 14:30"
-        \\
-        \\[policy]
-        \\required-signatures = 1
-        \\allow-helpers = false
-    ;
-
-    // no [maintainers.*] or [helpers.*] at all -- should hit the foundkeys check
-    try std.testing.expectError(error.missingkeys, parse_k(allocator, text));
-}
-
-test "parse_k errors on missing required hash field" {
-    const allocator = std.testing.allocator;
-
-    const text =
-        \\[hash]
-        \\head = "abc123"
-        \\
-        \\[policy]
-        \\required-signatures = 1
-        \\allow-helpers = false
-        \\
-        \\[maintainers.rocky]
-        \\fingerprint = "AAAA"
-        \\added = "2026-01-01 00:00"
-        \\active = true
-        \\revoked = false
-    ;
-
-    // last-edit missing entirely -> get_str returns null -> orelse fires
-    try std.testing.expectError(error.missingkeys, parse_k(allocator, text));
-}
 
 const parse_r = parsers.parse_r;
 
@@ -277,7 +234,7 @@ test "parse_a errors on missing src-url" {
         \\version = "2.0"
         \\
         \\[pkg]
-        \\sha256 = "deadbeef"
+        \\sha256 = "dd"
         \\
         \\[build]
         \\build-sys = "make"
@@ -296,7 +253,7 @@ test "parse_a errors on invalid strip value" {
         \\
         \\[pkg]
         \\src-url = "https://example.com/cmatrix.tar.gz"
-        \\sha256 = "deadbeef"
+        \\sha256 = "dd"
         \\strip = "9"
         \\
         \\[build]

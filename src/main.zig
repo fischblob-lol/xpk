@@ -126,18 +126,38 @@ pub fn main(init: std.process.Init) !void {
         return;
     } else 
 
+
+    // index requires root now because of the key signing system
     if (std.mem.eql(u8, args[1], "index")) {
         if (args.len < 3) {
             iprint("usage is xpk index <path to repo, locally>\n", .{});
             return;
         }
-        try utils.indexer.index_repo(io, allocator, args[2]);
+        try utils.cli.root();
+        const kp = utils.security.key_l(io) catch |err| switch (err) {
+            error.FileNotFound => {
+                wprint("no signing key found, run 'xpk keygen' first\n", .{});
+                return;
+            },
+            error.insecurekeypermissions => {
+                errprint("signing key has bad permissions, refusing to index see the earlier warning\n", .{});
+                return;
+            },
+        else => return err,
+        };
+        try utils.indexer.index_repo(io, allocator, args[2], kp);
     } else 
 
     if (std.mem.eql(u8, args[1], "pull") or std.mem.eql(u8, args[1], "sync")) {
         try utils.sync.pull_repo(io, allocator);
         return;
-    } 
+    } else 
+    
+    if (std.mem.eql(u8, args[1], "keygen")) {
+        try utils.cli.root();
+        try utils.security.generate(io);
+    }
+
     else {
         wprint("what the hell does that mean. \n", .{});
     }

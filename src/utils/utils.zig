@@ -6,10 +6,11 @@ const hash = @import("../security/hasher.zig");
 const index = @import("../index/index.zig");
 const fetcher = @import("../fetch/rfetch.zig");
 const pull = @import("../fetch/rpull.zig");
-
 const build = @import("../parsers/types/types.zig");
 const dispatcher = @import("../build/dispatch.zig");
 const extractor = @import("../extract/extract.zig");
+const verity = @import("../security/verify.zig"); // ask me anything
+const keygen = @import("../security/keygen.zig");
 
 
 pub const cli = struct {
@@ -55,6 +56,10 @@ pub const sync = struct {
 
 pub const security = struct {
     pub const get_hash = hash.get_hash;
+    pub const verify_s = verity.verify_s;
+    pub const generate = keygen.generate;
+    pub const sign = keygen.sign;
+    pub const key_l = keygen.key_l;
 };
 
 pub const misc = struct {

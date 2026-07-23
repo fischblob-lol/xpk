@@ -1,6 +1,8 @@
 const std = @import("std");
 const globals = @import("../globals.zig");
 const downloader = @import("../downloader/downloader.zig");
+const types = @import("../index/types/types.zig");
+const verity = @import("../security/verify.zig");
 const utils = @import("../utils/utils.zig");
 const print = std.debug.print;
 
@@ -106,42 +108,69 @@ pub fn init_repos(io: std.Io) !void {
 
 // saves locally, for the repo name inscribed in /opt/xpk/repos/repos.conf (parser work)
 // concurrently, and this is just the old renamed torso for pull_repos, this gets a repo handed to it, and downloads it
+// so this is also the newer one i made right now in this update,
 fn sync_repo(io: std.Io, allocator: std.mem.Allocator, repo: utils.parser.Repo) !void {
-    // globals are gonna make it much easier to port to linux later
     const repopath = try std.fs.path.join(allocator, &.{ globals.local, repo.name });
     defer allocator.free(repopath);
 
-    try createdir(io, repopath); // safe because if error it just catches null and exits only this not main problem
+    try createdir(io, repopath);
 
-    const indexurl = try std.fmt.allocPrint(
-        allocator,
-        "{s}/index.bin",
-        .{repo.url},
-    );
-    // urls forming
-    const keyringurl = try std.fmt.allocPrint(
-        allocator,
-        "{s}/trust/keyring.autm",
-        .{repo.url},
-    );
-
+    const indexurl = try std.fmt.allocPrint(allocator, "{s}/index.bin", .{repo.url});
+    const keyringurl = try std.fmt.allocPrint(allocator, "{s}/trust/keyring.autm", .{repo.url});
     defer allocator.free(indexurl);
     defer allocator.free(keyringurl);
 
-    // async time bitchh also download_repo now grows for async
     var indexfut = io.async(downloader.download_repo, .{ io, allocator, indexurl, repo.name, false });
     var keyringfut = io.async(downloader.download, .{ io, allocator, keyringurl, true });
 
     const downloadedindex = try indexfut.await(io);
+    defer allocator.free(downloadedindex);
     const downloadedkeyring = try keyringfut.await(io);
+    defer allocator.free(downloadedkeyring);
+
+    const keyringbytes = try std.Io.Dir.cwd().readFileAlloc(io, downloadedkeyring, allocator, .unlimited);
+    defer allocator.free(keyringbytes);
+    // shan't happen for big repos
+    var keyring = utils.parser.parse_k(allocator, keyringbytes) catch |err| {
+        wprint("{s}'s keyring.autm is malformed ({s}), refusing to sync\n", .{ repo.name, @errorName(err) });
+        return error.badkeyring;
+    };
+    defer {
+        keyring.maintainers.deinit();
+        keyring.helpers.deinit();
+    }
+
+    const rawindex = try std.Io.Dir.cwd().readFileAlloc(io, downloadedindex, allocator, .unlimited);
+    defer allocator.free(rawindex);
+
+    var signed = types.split_s(rawindex, allocator) catch |err| {
+        wprint("{s}'s index.bin is malformed or unsigned ({s}), refusing to sync\n", .{ repo.name, @errorName(err) });
+        return error.badindex;
+    };
+    defer signed.deinit(allocator);
+
+    verity.verify_s(signed, keyring) catch |err| {
+        wprint("{s}'s index.bin failed signature verification ({s}), refusing to sync\n", .{ repo.name, @errorName(err) });
+        return error.untrustedindex;
+    };
 
     const indexpath = try std.fs.path.join(allocator, &.{ repopath, "index.bin" });
     const keyringpath = try std.fs.path.join(allocator, &.{ repopath, "keyring.autm" });
     defer allocator.free(indexpath);
     defer allocator.free(keyringpath);
-    // renames the index.bin into the indexpath, clever little trick to just move file into another location, which is name of repo in /opt/xpk/repos + index.bin, simple
-    try rename(io, downloadedindex, indexpath);
+
+    {
+        const file = try std.Io.Dir.createFileAbsolute(io, indexpath, .{ .truncate = true });
+        defer file.close(io);
+        var writerbuf: [16 * 1024]u8 = undefined;
+        var fwriter = file.writer(io, &writerbuf);
+        try fwriter.interface.writeAll(signed.body); // unwrapped body, so i dont have to do JACK SHIT for rfetch.zig (luckily)
+        try fwriter.interface.flush(); // and thats why the wrapper was my design choice, cuz we can easily just unwrap its shit and put it as a usuable repo
+    }
+
     try rename(io, downloadedkeyring, keyringpath);
+
+    std.Io.Dir.deleteFileAbsolute(io, downloadedindex) catch {};
 }
 
 // pulls repos and uses async
@@ -154,8 +183,9 @@ pub fn pull_repo(io: std.Io, allocator: std.mem.Allocator) !void {
     const repos = try utils.parser.parse_r(allocator, reposbytes);
     defer allocator.free(repos);
     
+    
     if (repos.len == 0) {
-        iprint("no repositories configured\n", .{});
+        iprint("no repositories configured, please configure a repo\n", .{});
         return;
     }
 
@@ -173,7 +203,7 @@ pub fn pull_repo(io: std.Io, allocator: std.mem.Allocator) !void {
         try names.append(allocator, repo.name);
     }
 
-    var failures: usize = 0;
+    var failures: usize = 0; 
 
     for (futures.items, 0..) |*futs, i| {
         futs.await(io) catch |err| {

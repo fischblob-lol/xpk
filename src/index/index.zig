@@ -1,6 +1,8 @@
 const std = @import("std");
 const utils = @import("../utils/utils.zig");
 const types = @import("types/types.zig");
+const Ed25519 = std.crypto.sign.Ed25519;
+const sign = @import("../security/keygen.zig").sign;
 const print = std.debug.print;
 
 inline fn errprint(comptime fmt: []const u8, args: anytype) void {
@@ -79,10 +81,30 @@ fn encode_idx(allocator: std.mem.Allocator, entries: []types.Idxentry, head: [32
 
     return out.toOwnedSlice(allocator);
 }
+
+// basically a wrapper around the index.bin which lets us add a signature to show antitamper.
+// since its a wrapper, encode idx actually has no idea this part even exists
+pub fn wrap_signed(allocator: std.mem.Allocator, indexbin: []const u8, sigs: []const types.Sigentry) ![]u8 {
+    if (sigs.len > 255) return error.toomanysigners; // sigcount is u8, 255 signers is already absurd for any repo
+
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(allocator);
+
+    try writeU32(&out, allocator, @intCast(indexbin.len));
+    try out.appendSlice(allocator, indexbin);
+    // appneds fingerprint and signature to indexbin
+    try out.append(allocator, @intCast(sigs.len));
+    for (sigs) |s| {
+        try out.appendSlice(allocator, &s.fingerprint);
+        try out.appendSlice(allocator, &s.signature);
+    }
+
+    return out.toOwnedSlice(allocator);
+}
 // indexes a repo from a path and recursively generates a idxentry per package, also has someee debug output but ill prob wire up alot more 
 // now writes its own binary format (index.bin) instead of json
 // this is more of a developer exclusive use tool, as its made for generating repos instead of updating, however users can obviously just use this tool to wire up their own repos
-pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8) !void {
+pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8, kp: Ed25519.KeyPair) !void {
     var entries: std.ArrayList(types.Idxentry) = .empty;
     defer entries.deinit(allocator);
 
@@ -147,6 +169,17 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
     const indexbin = try encode_idx(allocator, entries.items, head); 
     defer allocator.free(indexbin);
 
+    // sign raw body, then its wrapped and easily unwrapped
+    const sigbytes = try sign(kp, indexbin);
+    const sigs = [_]types.Sigentry{.{
+        .fingerprint = kp.public_key.toBytes(),
+        .signature = sigbytes,
+    }};
+    
+
+    const wrapped = try wrap_signed(allocator, indexbin, &sigs);
+    defer allocator.free(wrapped);
+
     const idxbin = try std.fmt.allocPrint(allocator, "{s}/index.bin", .{repopath});
     defer allocator.free(idxbin);
 
@@ -157,12 +190,12 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
     var writerbuf: [16 * 1024]u8 = undefined;
     var writer = indexfile.writer(io, &writerbuf);
 
-    try writer.interface.writeAll(indexbin);
+    try writer.interface.writeAll(wrapped); 
     try writer.interface.flush();
 
     // also, later ill add a compression to the index.bin so for even more packages its compressed and is so much faster to download
     // but ill do it only when we have like 30 packages
-    iprint("indexed {d} packages\n", .{entries.items.len});
+    iprint("indexed {d} packages, signed with fingerprint {x}\n", .{ entries.items.len, kp.public_key.toBytes() });
 }
 
 // gets head directly from file so we dont use git as a dep,
@@ -210,7 +243,7 @@ fn get_head(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8) ![32
         // detached HEAD, hash is directly in HEAD, we usually dont want this though
         hashedtext = head;
     }
-
+    // very crude use of memset tbh, butyeah itt works
     var result: [32]u8 = undefined;
     @memset(&result, 0);
    
@@ -220,10 +253,10 @@ fn get_head(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8) ![32
         var sha1: [20]u8 = undefined;
         _ = try std.fmt.hexToBytes(&sha1, hashedtext);
         @memset(&result, 0);
-        @memcpy(result[0..20], &sha1);
+        @memcpy(result[0..20], &sha1); // for sha1
     } else if (hashedtext.len == 64) {
-    // sha256 (just for support)
-        _ = try std.fmt.hexToBytes(&result, hashedtext);
+    // sha256 (just for support), and we lowk wan it
+        _ = try std.fmt.hexToBytes(&result, hashedtext); // sha256
     } else { 
         return error.invalidcommithash;
     }

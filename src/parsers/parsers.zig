@@ -32,9 +32,6 @@ pub fn parse_k(allocator: std.mem.Allocator, text: []const u8) !types.Keyring {
         .helpers = std.StringHashMap(types.Key).init(allocator),
     };
 
-    result.head = try doc.get_str("hash", "head") orelse return error.missingkeys;
-    result.hashlastedit = try doc.get_str("hash", "last-edit") orelse return error.missingkeys;
-
     result.requiredsigs = @intCast(try doc.get_int("policy", "required-signatures") orelse return error.missingkeys);
     result.allowhelpers = try doc.get_bool("policy", "allow-helpers") orelse false;
 

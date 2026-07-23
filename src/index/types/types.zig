@@ -53,3 +53,53 @@ pub const Idxentry = struct {
         return s;
     }
 };
+
+
+// sig errors
+pub const Signederror = error{ truncated, toomanysigners };
+
+// sigs
+pub const Sigentry = struct {
+    fingerprint: [32]u8,
+    signature: [64]u8,
+};
+
+pub const Signedidx = struct {
+    body: []const u8,      // the original unwrapped index.bin bytes — magic..crc32, this is what mainly gets verified and parsd, also buf most outlive
+    sigs: []Sigentry,      // free seperatly
+
+    pub fn deinit(self: *Signedidx, allocator: std.mem.Allocator) void {
+        allocator.free(self.sigs);
+        self.sigs = &.{};
+    }
+};
+
+// split_signed a wrapped index.bin into its body 
+pub fn split_s(buf: []const u8, allocator: std.mem.Allocator) !Signedidx {
+    if (buf.len < 4) return Signederror.truncated;
+
+    const bodylen = std.mem.readInt(u32, buf[0..4], .little);
+    var pos: usize = 4;
+
+    if (buf.len < pos + bodylen + 1) return Signederror.truncated; // +1 for sigcount byte
+    const body = buf[pos .. pos + bodylen];
+    pos += bodylen;
+
+    const sigcount = buf[pos];
+    pos += 1;
+
+    const sigbytes: usize = @as(usize, sigcount) * (32 + 64);
+    if (buf.len < pos + sigbytes) return Signederror.truncated;
+
+    const sigs = try allocator.alloc(Sigentry, sigcount);
+    errdefer allocator.free(sigs);
+
+    for (sigs) |*s| {
+        @memcpy(&s.fingerprint, buf[pos .. pos + 32]);
+        pos += 32;
+        @memcpy(&s.signature, buf[pos .. pos + 64]);
+        pos += 64;
+    }
+
+    return .{ .body = body, .sigs = sigs };
+}

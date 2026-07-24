@@ -12,6 +12,7 @@ pub const Pkgurl = struct {
 
 // readded, because i put whatever i want to use in types/types.zig, and it doesnt contact with 'index' (atleast not yet) so im not putting it in utils
 pub const Idxentry = struct {
+    xhash: [32]u8,
     name: []const u8,
     category: []const u8,
     version: []const u8,
@@ -21,6 +22,8 @@ pub const Idxentry = struct {
     pub fn encode(self: Idxentry, allocator: std.mem.Allocator) ![]u8 {
         var blob: std.ArrayList(u8) = .empty;
         errdefer blob.deinit(allocator);
+
+        try blob.appendSlice(allocator, &self.xhash);
 
         inline for (.{ self.name, self.category, self.version, self.description }) |field| {
             var lenbuf: [2]u8 = undefined;
@@ -37,19 +40,25 @@ pub const Idxentry = struct {
     pub fn decode(buf: []const u8, offset: usize) Idxentry {
         var pos = offset;
 
+        // hashing storage logic
+        var hash: [32]u8 = undefined;
+        @memcpy(&hash, buf[pos..][0..32]);
+        pos += 32;
+
         const name = read_f(buf, &pos);
         const category = read_f(buf, &pos);
         const version = read_f(buf, &pos);
         const description = read_f(buf, &pos);
 
         return .{
+            .xhash = hash,
             .name = name,
             .category = category,
             .version = version,
             .description = description,
         };
     }
-    // reads the field
+    // read_field, reads the field by getting position
     fn read_f(buf: []const u8, pos: *usize) []const u8 {
         const len = std.mem.readInt(u16, buf[pos.*..][0..2], .little);
         pos.* += 2;
@@ -58,6 +67,7 @@ pub const Idxentry = struct {
         return s;
     }
 };
+
 
 pub const Idxerror = error{ badmagic, unsupportedvers, crcmismatch, truncated };
 

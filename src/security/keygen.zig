@@ -1,3 +1,8 @@
+//! this is a more 'developer exclusive' tool
+//! however xpk is also made because you can easily host your own repos!
+//! soon ill add even git support through private ones, if you feel like gatekeeping
+//! so i keep this in the same binary for easy use, no point to start another repo.
+//! altough, i might actually make this into a xpk tool like xpk-sign, but that will happen later
 const std = @import("std");
 const Ed25519 = std.crypto.sign.Ed25519;
 const globals = @import("../globals.zig");
@@ -96,7 +101,7 @@ pub fn generate(io: std.Io) !void {
         try fwriter.interface.flush();
     }
 
-    cprint("generated keypair \nfingerprint (paste into keyring.autm in your repo): {x}\nprivate key: {s} (chmod 600, back this up somewhere safe because losing it means re-keying every repo you maintain, and thats bad)\n", .{ kp.public_key.toBytes(), privpath() });
+    cprint("generated keypair \nfingerprint (paste into keyring.autm in the repo you want to be a maintainer/helper off, or give it to the owner if strict perms): {x}\nprivate key: {s} (chmod 600, back this up somewhere safe because losing it means re-keying every repo you maintain, and thats bad)\n", .{ kp.public_key.toBytes(), privpath() });
 }
 
 // loads the keypair for signing, if the key is exposed it errors and urges you to well, fix the thing duh, key_load

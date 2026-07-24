@@ -25,3 +25,9 @@ pub fn get_hash(file: std.Io.File, io: std.Io, expected: []const u8) !bool {
 
     return std.mem.eql(u8, &donehex, expected);
 }
+// fuck.
+pub fn get_hashb(data: []const u8) ![std.crypto.hash.sha2.Sha256.digest_length]u8 {
+    var digest: [std.crypto.hash.sha2.Sha256.digest_length]u8 = undefined;
+    std.crypto.hash.sha2.Sha256.hash(data, &digest, .{});
+    return digest;
+}

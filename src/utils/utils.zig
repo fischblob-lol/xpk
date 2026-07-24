@@ -56,10 +56,12 @@ pub const sync = struct {
 
 pub const security = struct {
     pub const get_hash = hash.get_hash;
+    pub const get_hashb = hash.get_hashb;
     pub const verify_s = verity.verify_s;
     pub const generate = keygen.generate;
     pub const sign = keygen.sign;
     pub const key_l = keygen.key_l;
+    
 };
 
 pub const misc = struct {

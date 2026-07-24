@@ -119,7 +119,6 @@ pub fn remote_fetch(io: std.Io, allocator: std.mem.Allocator, package: []const u
     const headstr = try format_head(allocator, foundhead);
     defer allocator.free(headstr);
 
-
     const path = try std.fmt.allocPrint(allocator, "{s}/{s}/xbuild", .{ pkg.category, pkg.name });
     defer allocator.free(path);
 
@@ -127,10 +126,20 @@ pub fn remote_fetch(io: std.Io, allocator: std.mem.Allocator, package: []const u
     const xbuildurl = try build_url(allocator, repo.url, headstr, path);
     defer allocator.free(xbuildurl);
 
-
+    
     iprint("getting remote build files...\n", .{});
 
+    //errordefers and added a hash getter, and hash formatter for index.bin
     const xbuildbytes = try fetchraw(allocator, io, xbuildurl);
+    errdefer allocator.free(xbuildbytes);
+    // so our security is not only per repo it is per package, although hashes do not have a use for being individually signed, its much better to just sign the repo
+    const avhash = try utils.security.get_hashb(xbuildbytes);
+
+    if (!std.mem.eql(u8,  &avhash, &pkg.xhash)) {
+        wprint("hash of package in index.bin does not match the one that was downloaded\n", .{});
+        return error.xbuildhashmismatch;
+    }
+
 
     return types.Pkgurl{ .allocator = allocator, .xbuild = xbuildbytes };
 }

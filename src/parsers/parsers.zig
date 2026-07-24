@@ -185,3 +185,5 @@ pub fn parse_a(allocator: std.mem.Allocator, text: []const u8) !types.Xbuild {
 
     return result;
 }
+
+// imma add a config parser here later

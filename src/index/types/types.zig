@@ -1,12 +1,14 @@
 const std = @import("std");
 
-// binary layout (index.bin, my v1):
+// binary layout (index.bin, my v2):
+//   hash:  32 bytes   sha256 bytes
 //   name:  u16 (LE)   name bytes
 //   cat:   u16 (LE)   category bytes
 //   ver:   u16 (LE)   version bytes
 //   desc:  u16 (LE)   description bytes
 // fields are in this order, so they can be parsed (duh)
 pub const Idxentry = struct {
+    xhash: [32]u8,
     name: []const u8,
     category: []const u8,
     version: []const u8,
@@ -16,6 +18,8 @@ pub const Idxentry = struct {
     pub fn encode(self: Idxentry, allocator: std.mem.Allocator) ![]u8 {
         var blob: std.ArrayList(u8) = .empty;
         errdefer blob.deinit(allocator);
+
+        try blob.appendSlice(allocator, &self.xhash);
 
         inline for (.{ self.name, self.category, self.version, self.description }) |field| {
             var lenbuf: [2]u8 = undefined;
@@ -32,12 +36,18 @@ pub const Idxentry = struct {
     pub fn decode(buf: []const u8, offset: usize) Idxentry {
         var pos = offset;
 
+        // hashing storage logic
+        var hash: [32]u8 = undefined;
+        @memcpy(&hash, buf[pos..][0..32]);
+        pos += 32;
+
         const name = read_f(buf, &pos);
         const category = read_f(buf, &pos);
         const version = read_f(buf, &pos);
         const description = read_f(buf, &pos);
 
         return .{
+            .xhash = hash,
             .name = name,
             .category = category,
             .version = version,

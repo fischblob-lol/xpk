@@ -4,3 +4,4 @@ zig-out/
 .venv/ 
 docs/build
 zig-pkg/
+.vscode/

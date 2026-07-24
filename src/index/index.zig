@@ -18,8 +18,8 @@ inline fn wprint(comptime fmt: []const u8, args: anytype) void {
 }
 
 // magic bytes for index.bin, so you can instantly tell from a xxd/hexdump, and because it looks fucking awesome and cool tbh
-const MAGIC = "XPKI";
-const FORMATVERS: u16 = 1;
+const magic = "XPKI";
+const formatvers: u16 = 1;
 
 // i need these guys, since we are actually writing hex now
 inline fn writeU16(list: *std.ArrayList(u8), allocator: std.mem.Allocator, val: u16) !void {
@@ -59,8 +59,8 @@ fn encode_idx(allocator: std.mem.Allocator, entries: []types.Idxentry, head: [32
     var out: std.ArrayList(u8) = .empty;
     errdefer out.deinit(allocator);
 
-    try out.appendSlice(allocator, MAGIC);
-    try writeU16(&out, allocator, FORMATVERS);
+    try out.appendSlice(allocator, magic);
+    try writeU16(&out, allocator, formatvers);
     try out.appendSlice(allocator, &head); // fixed 32 bytes, if its padded sure fine, if its not padded then great, i recommend yall to use git sha-256, since i support it
     try writeU32(&out, allocator, @intCast(entries.len));
 
@@ -104,6 +104,7 @@ pub fn wrap_signed(allocator: std.mem.Allocator, indexbin: []const u8, sigs: []c
 // indexes a repo from a path and recursively generates a idxentry per package, also has someee debug output but ill prob wire up alot more 
 // now writes its own binary format (index.bin) instead of json
 // this is more of a developer exclusive use tool, as its made for generating repos instead of updating, however users can obviously just use this tool to wire up their own repos
+// recent add: hashing for individual xbuilds
 pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8, kp: Ed25519.KeyPair) !void {
     var entries: std.ArrayList(types.Idxentry) = .empty;
     defer entries.deinit(allocator);
@@ -154,6 +155,7 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
 
             // appends everything so it can put it into the binary blob, unrolled for readability 
             try entries.append(allocator, .{
+                .xhash = try utils.security.get_hashb(bytes),
                 .name = try allocator.dupe(u8, xbuild.info.name),
                 .category = try allocator.dupe(u8, category.name),
                 .version = try allocator.dupe(u8, xbuild.info.version),

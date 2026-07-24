@@ -59,11 +59,11 @@ untrusted and please open an issue, although this shan't happen.
 
 Documentation
 =============
-At the moment, xpk is not well documented. However, you can run:
-```bash
-scripts/setup-docs.sh && scripts/build-docs.sh 
-```
-to initialize docs locally, in the near future they will be hosted on a website for easier viewing.
+At the moment, XPK is **temporarily** documented on NeoCities.org.
+
+We will plan on switching to something else, for example codeberg pages.
+
+For the time being, documentation is hosted at: https://xnu-package-kit-neocities.org and is maintained by firewald and firewald only.
 
 How can I say thanks?
 =====================

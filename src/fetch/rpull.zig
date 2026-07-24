@@ -115,8 +115,8 @@ fn sync_repo(io: std.Io, allocator: std.mem.Allocator, repo: utils.parser.Repo) 
 
     try createdir(io, repopath);
 
-    const indexurl = try std.fmt.allocPrint(allocator, "{s}/index.bin", .{repo.url});
-    const keyringurl = try std.fmt.allocPrint(allocator, "{s}/trust/keyring.autm", .{repo.url});
+    const indexurl = try std.fmt.allocPrint(allocator, "{s}/index", .{repo.url});
+    const keyringurl = try std.fmt.allocPrint(allocator, "{s}/trust/keyring", .{repo.url});
     defer allocator.free(indexurl);
     defer allocator.free(keyringurl);
 
@@ -132,7 +132,7 @@ fn sync_repo(io: std.Io, allocator: std.mem.Allocator, repo: utils.parser.Repo) 
     defer allocator.free(keyringbytes);
     // shan't happen for big repos
     var keyring = utils.parser.parse_k(allocator, keyringbytes) catch |err| {
-        wprint("{s}'s keyring.autm is malformed ({s}), refusing to sync\n", .{ repo.name, @errorName(err) });
+        wprint("{s}'s keyring is malformed ({s}), refusing to sync\n", .{ repo.name, @errorName(err) });
         return error.badkeyring;
     };
     defer {
@@ -144,18 +144,18 @@ fn sync_repo(io: std.Io, allocator: std.mem.Allocator, repo: utils.parser.Repo) 
     defer allocator.free(rawindex);
 
     var signed = types.split_s(rawindex, allocator) catch |err| {
-        wprint("{s}'s index.bin is malformed or unsigned ({s}), refusing to sync\n", .{ repo.name, @errorName(err) });
+        wprint("{s}'s index is malformed or unsigned ({s}), refusing to sync\n", .{ repo.name, @errorName(err) });
         return error.badindex;
     };
     defer signed.deinit(allocator);
 
     verity.verify_s(signed, keyring) catch |err| {
-        wprint("{s}'s index.bin failed signature verification ({s}), refusing to sync\n", .{ repo.name, @errorName(err) });
+        wprint("{s}'s index failed signature verification ({s}), refusing to sync\n", .{ repo.name, @errorName(err) });
         return error.untrustedindex;
     };
 
-    const indexpath = try std.fs.path.join(allocator, &.{ repopath, "index.bin" });
-    const keyringpath = try std.fs.path.join(allocator, &.{ repopath, "keyring.autm" });
+    const indexpath = try std.fs.path.join(allocator, &.{ repopath, "index" });
+    const keyringpath = try std.fs.path.join(allocator, &.{ repopath, "keyring" });
     defer allocator.free(indexpath);
     defer allocator.free(keyringpath);
 

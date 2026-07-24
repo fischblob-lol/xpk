@@ -83,14 +83,14 @@ pub fn remote_fetch(io: std.Io, allocator: std.mem.Allocator, package: []const u
     for (repos) |repo| {
         if (!repo.enabled) continue;
 
-        const indexpath = try std.fs.path.join(allocator, &.{ globals.local, repo.name, "index.bin" });
+        const indexpath = try std.fs.path.join(allocator, &.{ globals.local, repo.name, "index" });
         defer allocator.free(indexpath);
 
         // we dont free here for a REASON its in a FOR LOOP
         const indexbytes = std.Io.Dir.cwd().readFileAlloc(io, indexpath, allocator, .unlimited) catch continue;
 
         const parsed = types.parse_idx(indexbytes, allocator) catch |err| {
-            wprint("{s}'s index.bin is malformed ({s}), skipping repo\n", .{ repo.name, @errorName(err) });
+            wprint("{s}'s index is malformed ({s}), skipping repo\n", .{ repo.name, @errorName(err) });
             continue;
         };
         defer allocator.free(parsed.offsets); // we free these cuz we don't need allat after the for statement

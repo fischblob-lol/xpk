@@ -182,7 +182,7 @@ pub fn index_repo(io: std.Io, allocator: std.mem.Allocator, repopath: []const u8
     const wrapped = try wrap_signed(allocator, indexbin, &sigs);
     defer allocator.free(wrapped);
 
-    const idxbin = try std.fmt.allocPrint(allocator, "{s}/index.bin", .{repopath});
+    const idxbin = try std.fmt.allocPrint(allocator, "{s}/index", .{repopath});
     defer allocator.free(idxbin);
 
     // final things + write stuff

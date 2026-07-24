@@ -63,7 +63,7 @@ At the moment, XPK is **temporarily** documented on NeoCities.org.
 
 We will plan on switching to something else, for example codeberg pages.
 
-For the time being, documentation is hosted at: https://xnu-package-kit-neocities.org and is maintained by firewald and firewald only.
+For the time being, documentation is hosted at: https://xnu-package-kit.neocities.org and is maintained by firewald and firewald only.
 
 How can I say thanks?
 =====================
